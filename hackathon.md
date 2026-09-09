@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** none
 - **Started:** 2026-09-08T12:34:04Z
-- **Last updated:** 2026-09-09T11:28:00Z
+- **Last updated:** 2026-09-09T13:12:00Z
 
 ## Log
 
@@ -51,3 +51,6 @@ Created public GitHub repo `https://github.com/Abraham12611/BrandSheriff` via th
 
 ### 2026-09-09 - pushed to GitHub
 Pushed the committed code to `main` on `https://github.com/Abraham12611/BrandSheriff` using a temporary GitHub PAT. Removed the PAT from `.env.local` after use. Verified the public repo shows the project files.
+
+### 2026-09-09 - dashboard, landing page, demo script
+Enhanced the Command Center dashboard with KPI cards, quick actions, demo-store links, recent patrol runs, discoveries needing review, and active cases. Added a standalone marketing landing page at `/landing/index.html` with the product loop and a judge CTA. Created `DEMO.md` with a 3-minute walkthrough script covering demo seeding, patrol, forensics, case creation, draft approval/send, verification, and Hydra watch. Rebuilt and redeployed.

@@ -4,8 +4,14 @@ import { api } from '../../convex/_generated/api'
 
 export default function Dashboard() {
   const brands = useQuery(api.brands.list)
+  const firstBrand = brands?.[0]
   const discoveries = useQuery(api.discoveries.listByStatus, { status: 'needs_review' })
-  const cases = useQuery(api.cases.listByState, { state: 'active' })
+  const activeCases = useQuery(api.cases.listByState, { state: 'active' })
+  const resolvedCases = useQuery(api.cases.listByState, { state: 'resolved' })
+  const runs = useQuery(
+    api.patrolRuns.listByBrand,
+    firstBrand ? { brandId: firstBrand._id } : 'skip',
+  )
   const loadDemo = useMutation(api.seed.loadDemoWorkspace)
   const crawl = useAction(api.brandDna.crawl)
   const [seeding, setSeeding] = useState(false)
@@ -28,47 +34,143 @@ export default function Dashboard() {
         <p className="text-neutral-600 mt-1">Real-time overview of your brand defense operations.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Brands monitored" value={brands?.length ?? 0} />
         <KpiCard label="Needs review" value={discoveries?.length ?? 0} tone="warning" />
-        <KpiCard label="Active cases" value={cases?.length ?? 0} tone="danger" />
+        <KpiCard label="Active cases" value={activeCases?.length ?? 0} tone="danger" />
+        <KpiCard label="Resolved" value={resolvedCases?.length ?? 0} tone="success" />
       </div>
 
-      <div className="bg-white rounded-lg border border-neutral-200 p-6">
-        <h2 className="font-semibold mb-4">Quick actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <a href="/onboarding" className="px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800">
-            Onboard a brand
-          </a>
-          <a href="/patrols" className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50">
-            Run patrol
-          </a>
-          <a href="/cases" className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50">
-            View cases
-          </a>
-          <button
-            onClick={handleLoadDemo}
-            disabled={seeding}
-            className="px-4 py-2 bg-amber-500 text-neutral-900 rounded-md text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
-          >
-            {seeding ? 'Loading demo...' : 'Load Northstar demo'}
-          </button>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="lg:col-span-2 bg-white rounded-lg border border-neutral-200 p-6">
+          <h2 className="font-semibold mb-4">Quick actions</h2>
+          <div className="flex flex-wrap gap-3">
+            <a href="/onboarding" className="px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800">
+              Onboard a brand
+            </a>
+            <a href="/patrols" className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50">
+              Run patrol
+            </a>
+            <a href="/cases" className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50">
+              View cases
+            </a>
+            <button
+              onClick={handleLoadDemo}
+              disabled={seeding}
+              className="px-4 py-2 bg-amber-500 text-neutral-900 rounded-md text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
+            >
+              {seeding ? 'Loading demo...' : 'Load Northstar demo'}
+            </button>
+          </div>
+
+          {firstBrand && (
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-md border border-neutral-200 p-4">
+                <div className="text-xs text-neutral-500 uppercase tracking-wide">Official demo store</div>
+                <a
+                  href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/northstar/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-600 hover:underline mt-1 block truncate"
+                >
+                  Northstar Atelier
+                </a>
+              </div>
+              <div className="rounded-md border border-neutral-200 p-4">
+                <div className="text-xs text-neutral-500 uppercase tracking-wide">Demo clone threat</div>
+                <a
+                  href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/clone/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-600 hover:underline mt-1 block truncate"
+                >
+                  Suspicious clone
+                </a>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Recent patrol runs</div>
+          <ul className="divide-y divide-neutral-100">
+            {runs?.slice(0, 5).map((run) => (
+              <li key={run._id} className="px-4 py-3 flex items-center justify-between">
+                <span className="text-sm font-medium capitalize">{run.type}</span>
+                <StatusBadge status={run.status} />
+              </li>
+            ))}
+            {(runs?.length ?? 0) === 0 && (
+              <li className="px-4 py-8 text-center text-neutral-500 text-sm">No patrol runs yet.</li>
+            )}
+          </ul>
+        </section>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Discoveries needing review</div>
+          <ul className="divide-y divide-neutral-100">
+            {discoveries?.slice(0, 5).map((d) => (
+              <li key={d._id} className="px-4 py-3">
+                <a href="/patrols" className="text-sm font-medium hover:underline block truncate">
+                  {d.title ?? d.canonicalUrl}
+                </a>
+                <p className="text-xs text-neutral-500 truncate">{d.canonicalUrl}</p>
+              </li>
+            ))}
+            {(discoveries?.length ?? 0) === 0 && (
+              <li className="px-4 py-8 text-center text-neutral-500 text-sm">No discoveries yet. Run a patrol.</li>
+            )}
+          </ul>
+        </section>
+
+        <section className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Active cases</div>
+          <ul className="divide-y divide-neutral-100">
+            {activeCases?.slice(0, 5).map((c) => (
+              <li key={c._id} className="px-4 py-3">
+                <a href={`/#/cases/${c._id}`} className="text-sm font-medium hover:underline block truncate">
+                  {c.title}
+                </a>
+                <p className="text-xs text-neutral-500">{c.caseNumber} · {c.severity ?? '—'}</p>
+              </li>
+            ))}
+            {(activeCases?.length ?? 0) === 0 && (
+              <li className="px-4 py-8 text-center text-neutral-500 text-sm">No active cases yet.</li>
+            )}
+          </ul>
+        </section>
       </div>
     </div>
   )
 }
 
-function KpiCard({ label, value, tone }: { label: string; value: number; tone?: 'neutral' | 'warning' | 'danger' }) {
+function KpiCard({ label, value, tone }: { label: string; value: number; tone?: 'neutral' | 'warning' | 'danger' | 'success' }) {
   const toneClasses = {
     neutral: 'bg-white border-neutral-200',
     warning: 'bg-amber-50 border-amber-200',
     danger: 'bg-rose-50 border-rose-200',
+    success: 'bg-emerald-50 border-emerald-200',
   }
   return (
     <div className={`rounded-lg border p-5 ${toneClasses[tone ?? 'neutral']}`}>
       <div className="text-sm text-neutral-600">{label}</div>
       <div className="text-3xl font-bold mt-1">{value}</div>
     </div>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    queued: 'bg-neutral-100 text-neutral-700',
+    running: 'bg-blue-50 text-blue-700',
+    completed: 'bg-emerald-50 text-emerald-700',
+    failed: 'bg-rose-50 text-rose-700',
+  }
+  return (
+    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] ?? styles.queued}`}>
+      {status}
+    </span>
   )
 }
