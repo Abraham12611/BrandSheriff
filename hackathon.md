@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** none
 - **Started:** 2026-09-08T12:34:04Z
-- **Last updated:** 2026-09-09T11:23:00Z
+- **Last updated:** 2026-09-09T11:28:00Z
 
 ## Log
 
@@ -48,3 +48,6 @@ Added `convex/verification.ts` with a `recheckTarget` action that re-scrapes the
 
 ### 2026-09-09 - GitHub repo + AgentMail webhook secret
 Created public GitHub repo `https://github.com/Abraham12611/BrandSheriff` via the GitHub MCP, initialized the local repo, committed the project code, and added a `.gitignore` that excludes `node_modules`, `.env.local`, generated Convex bindings, build output, and local skill/context packs. Set `AGENTMAIL_WEBHOOK_SECRET` on both dev and prod Convex deployments from the provided `.env.local` so the inbound AgentMail webhook at `/agentmail/webhook` is verified.
+
+### 2026-09-09 - pushed to GitHub
+Pushed the committed code to `main` on `https://github.com/Abraham12611/BrandSheriff` using a temporary GitHub PAT. Removed the PAT from `.env.local` after use. Verified the public repo shows the project files.
