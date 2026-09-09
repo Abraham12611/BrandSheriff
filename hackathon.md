@@ -4,7 +4,7 @@
 - **Event:** Convex All Gas Hackathon
 - **What it does:** AI-assisted brand-defense command center that discovers suspected online brand/copyright abuse, preserves evidence, explains matches, routes cases to enforcement workflows, drafts communications, sends after approval, verifies outcomes, and watches for reappearance.
 - **Live app:** https://rapid-peccary-734.convex.site
-- **Repo:** none
+- **Repo:** https://github.com/Abraham12611/BrandSheriff
 - **Frontend:** Convex static hosting
 - **Convex deployment:** https://rapid-peccary-734.convex.cloud
 - **Components:** @convex-dev/static-hosting
@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** none
 - **Started:** 2026-09-08T12:34:04Z
-- **Last updated:** 2026-09-09T11:15:00Z
+- **Last updated:** 2026-09-09T11:23:00Z
 
 ## Log
 
@@ -45,3 +45,6 @@ Switched the case-detail action from "provision inbox" to "connect inbox" using 
 
 ### 2026-09-09 - verification + Hydra watch
 Added `convex/verification.ts` with a `recheckTarget` action that re-scrapes the case's target URL and uses OpenAI to classify the outcome as `removed`, `changed`, `still_present`, or `inconclusive`, then transitions the case state. Added `convex/hydra.ts` with `startWatch` and `runWatch` so a resolved case can be watched for reappearance; `runWatch` searches Firecrawl for the brand and creates new discoveries. Wired both into the case detail UI. Rebuilt and redeployed.
+
+### 2026-09-09 - GitHub repo + AgentMail webhook secret
+Created public GitHub repo `https://github.com/Abraham12611/BrandSheriff` via the GitHub MCP, initialized the local repo, committed the project code, and added a `.gitignore` that excludes `node_modules`, `.env.local`, generated Convex bindings, build output, and local skill/context packs. Set `AGENTMAIL_WEBHOOK_SECRET` on both dev and prod Convex deployments from the provided `.env.local` so the inbound AgentMail webhook at `/agentmail/webhook` is verified.
