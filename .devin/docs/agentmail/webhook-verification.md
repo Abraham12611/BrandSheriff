@@ -1,0 +1,428 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Verifying Webhooks
+
+> Learn how to verify webhook signatures to secure your webhook endpoints and prevent spoofed requests.
+
+When building webhook receivers, it's critical to verify that incoming requests actually originate from AgentMail and haven't been tampered with. AgentMail uses [Svix](https://www.svix.com/) to deliver webhooks, which provides cryptographic signature verification.
+
+## Why Verify Webhooks?
+
+Without verification, anyone who discovers your webhook URL could send fake requests to your endpoint, potentially causing:
+
+* **Data manipulation:** Malicious actors could trigger actions based on fake events
+* **Security breaches:** Spoofed messages could inject harmful data into your systems
+* **Resource exhaustion:** Attackers could flood your endpoint with fake requests
+
+Always verify webhook signatures in production environments.
+
+## Getting Your Signing Secret
+
+Each webhook endpoint has a unique signing secret that you'll use to verify requests. You can find this secret in the AgentMail console when you create your webhook or by fetching your webhook details:
+
+```python
+from agentmail import AgentMail
+
+client = AgentMail()
+
+# Get webhook details including the signing secret
+webhook = client.webhooks.get(webhook_id="ep_xxx")
+
+# The secret starts with "whsec_"
+signing_secret = webhook.secret
+print(f"Signing secret: {signing_secret}")
+```
+
+```typescript
+import AgentMail from "agentmail";
+
+const client = new AgentMail();
+
+// Get webhook details including the signing secret
+const webhook = await client.webhooks.get("ep_xxx");
+
+// The secret starts with "whsec_"
+const signingSecret = webhook.secret;
+console.log(`Signing secret: ${signingSecret}`);
+```
+
+```bash title="CLI"
+# get webhook details including the signing secret
+agentmail webhooks get --webhook-id ep_xxx
+```
+
+#### Keep your secret safe
+
+Store your signing secret securely in environment variables. Never commit it to version control or expose it in client-side code.
+
+## Verification Headers
+
+Every webhook request from AgentMail includes three headers used for verification:
+
+| Header           | Description                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `svix-id`        | Unique message identifier. Same ID is used for retries of the same message.                   |
+| `svix-timestamp` | Unix timestamp (seconds) when the message was sent.                                           |
+| `svix-signature` | Space-delimited list of signatures in the format `v1,<base64>` (e.g., `v1,abc123 v1,def456`). |
+
+## Verifying with the Svix Library (Recommended)
+
+The easiest way to verify webhooks is using the official Svix library, which handles all the cryptographic details for you.
+
+```python
+import os
+from dotenv import load_dotenv
+from flask import Flask, request
+
+from svix.webhooks import Webhook, WebhookVerificationError
+
+load_dotenv()
+
+app = Flask(__name__)
+
+secret = os.environ["AGENTMAIL_WEBHOOK_SECRET"]
+
+@app.route('/webhooks', methods=['POST'])
+def webhook_handler():
+    headers = request.headers
+    payload = request.get_data()
+
+    try:
+        wh = Webhook(secret)
+        msg = wh.verify(payload, headers)
+    except WebhookVerificationError as e:
+        return ('', 400)
+
+    # handle by event type (msg is the verified payload)
+    if msg.get("event_type") == "message.received":
+        # process incoming email...
+        pass
+    elif msg.get("event_type") == "domain.verified":
+        # enable domain features...
+        pass
+
+    return ('', 204)
+
+if __name__ == '__main__':
+    app.run(port=3000)
+
+```
+
+```typescript
+import "dotenv/config";
+import express, { Request, Response } from "express";
+import { Webhook } from "svix";
+
+const app = express();
+const port = 3000;
+
+const secret = process.env.AGENTMAIL_WEBHOOK_SECRET;
+
+if (!secret) {
+  throw new Error("AGENTMAIL_WEBHOOK_SECRET environment variable is required");
+}
+
+app.post(
+  "/webhooks",
+  express.raw({ type: "application/json" }),
+  (req: Request, res: Response) => {
+    const payload = req.body;
+    const headers = req.headers as Record<string, string>;
+
+    try {
+      const wh = new Webhook(secret);
+      const msg = wh.verify(payload, headers);
+
+      // handle by event type (msg is the verified payload)
+      if (msg.event_type === "message.received") {
+        // process incoming email...
+      } else if (msg.event_type === "domain.verified") {
+        // enable domain features...
+      }
+
+      res.status(204).send();
+    } catch (err) {
+      console.error("Webhook verification failed:", err);
+      res.status(400).send();
+    }
+  }
+);
+
+app.listen(port, () => {
+  console.log(`Webhook server listening on port ${port}`);
+});
+```
+
+#### Raw body required
+
+Signature verification requires the exact request body. If you're using body-parsing middleware (like `express.json()`), make sure to capture the raw body before parsing, or use `express.raw()` for your webhook endpoint.
+
+## Copy for Cursor / Claude
+
+Copy one of the blocks below into Cursor or Claude for webhook verification in one shot.
+
+```python title="Python"
+"""
+AgentMail Webhook Verification — copy into Cursor/Claude.
+
+Use Svix: pip install svix. Get secret from webhooks.get(webhook_id).secret (starts whsec_).
+Headers: svix-id, svix-timestamp, svix-signature. Use request.get_data() (raw body), not request.json.
+"""
+from flask import Flask, request
+from svix.webhooks import Webhook, WebhookVerificationError
+
+app = Flask(__name__)
+secret = "whsec_..."  # from client.webhooks.get(id).secret
+
+@app.route("/webhooks", methods=["POST"])
+def handler():
+  try:
+    wh = Webhook(secret)
+    msg = wh.verify(request.get_data(), request.headers)
+    if msg.get("event_type") == "message.received":
+      pass  # process
+    return "", 204
+  except WebhookVerificationError:
+    return "", 400
+```
+
+```typescript title="TypeScript"
+/**
+ * AgentMail Webhook Verification — copy into Cursor/Claude.
+ *
+ * Use Svix: npm install svix. Secret from webhooks.get(id).secret.
+ * Use express.raw({ type: "application/json" }) — NOT express.json(). Verify before parsing.
+ */
+import express from "express";
+import { Webhook } from "svix";
+
+const app = express();
+const secret = process.env.AGENTMAIL_WEBHOOK_SECRET;
+if (!secret) {
+  throw new Error("AGENTMAIL_WEBHOOK_SECRET environment variable is required");
+}
+
+app.post("/webhooks", express.raw({ type: "application/json" }), (req, res) => {
+  try {
+    const wh = new Webhook(secret);
+    const msg = wh.verify(req.body, req.headers as Record<string, string>);
+    if (msg.event_type === "message.received") { /* process */ }
+    res.status(204).send();
+  } catch {
+    res.status(400).send();
+  }
+});
+```
+
+## Testing Locally with ngrok
+
+During development, you'll need a way for AgentMail to reach your local server. [ngrok](https://ngrok.com/) creates a public URL that tunnels to your local machine.
+
+### Step 1: Save Your Webhook Server
+
+Create a webhook server file:
+
+```python title="webhook_server.py"
+import os
+from dotenv import load_dotenv
+from flask import Flask, request
+
+from svix.webhooks import Webhook, WebhookVerificationError
+
+load_dotenv()
+
+app = Flask(__name__)
+
+secret = os.environ.get("AGENTMAIL_WEBHOOK_SECRET")
+
+@app.route('/webhooks', methods=['POST'])
+def webhook_handler():
+    headers = request.headers
+    payload = request.get_data()
+
+    try:
+        wh = Webhook(secret)
+        msg = wh.verify(payload, headers)
+        print(f"Received event: {msg}")
+    except WebhookVerificationError as e:
+        print(f"Verification failed: {e}")
+        return ('', 400)
+
+    # handle by event type (msg is the verified payload)
+    if msg.get("event_type") == "message.received":
+        # process incoming email...
+        pass
+    elif msg.get("event_type") == "domain.verified":
+        # enable domain features...
+        pass
+
+    return ('', 204)
+
+if __name__ == '__main__':
+    app.run(port=3000)
+```
+
+```typescript title="webhook_server.ts"
+import "dotenv/config";
+import express, { Request, Response } from "express";
+import { Webhook } from "svix";
+
+const app = express();
+const port = 3000;
+
+const secret = process.env.AGENTMAIL_WEBHOOK_SECRET;
+
+if (!secret) {
+  throw new Error("AGENTMAIL_WEBHOOK_SECRET environment variable is required");
+}
+
+app.post(
+  "/webhooks",
+  express.raw({ type: "application/json" }),
+  (req: Request, res: Response) => {
+    const payload = req.body;
+    const headers = req.headers as Record<string, string>;
+
+    try {
+      const wh = new Webhook(secret);
+      const msg = wh.verify(payload, headers);
+
+      // handle by event type (msg is the verified payload)
+      if (msg.event_type === "message.received") {
+        // process incoming email...
+      } else if (msg.event_type === "domain.verified") {
+        // enable domain features...
+      }
+
+      res.status(204).send();
+    } catch (err) {
+      console.error("Webhook verification failed:", err);
+      res.status(400).send();
+    }
+  }
+);
+
+app.listen(port, () => {
+  console.log(`Webhook server listening on port ${port}`);
+});
+```
+
+### Step 2: Install Dependencies and Run the Server
+
+```bash title="Python"
+pip install flask python-dotenv svix
+python webhook_server.py
+```
+
+```bash title="TypeScript"
+npm install express svix dotenv
+npx ts-node webhook_server.ts
+```
+
+You should see output like:
+
+```bash title="Python"
+ * Serving Flask app 'webhook_server'
+ * Debug mode: off
+ * Running on http://127.0.0.1:3000
+Press CTRL+C to quit
+```
+
+```bash title="TypeScript"
+Webhook server listening on port 3000
+```
+
+### Step 3: Start ngrok
+
+In a new terminal window, start ngrok to create a public tunnel to your local server:
+
+```bash
+ngrok http 3000
+```
+
+ngrok will display a forwarding URL:
+
+```
+Session Status                online
+Account                       your-email@example.com (Plan: Free)
+Version                       3.22.1
+Region                        United States (California) (us-cal-1)
+Forwarding                    https://da550b82a183.ngrok.app -> http://localhost:3000
+```
+
+Copy the `https://` forwarding URL (e.g., `https://da550b82a183.ngrok.app`).
+
+### Step 4: Add the URL to AgentMail Console
+
+1. Go to the [AgentMail Console](https://console.agentmail.to)
+2. Navigate to **Webhooks** in the sidebar
+3. Click **Create Webhook** (or edit an existing one)
+4. Paste your ngrok URL with the `/webhooks` path: `https://da550b82a183.ngrok.app/webhooks`
+5. Select the events you want to receive
+6. Save the webhook
+7. Copy the signing secret and add it to your `.env` file:
+
+```bash
+AGENTMAIL_WEBHOOK_SECRET=whsec_your_secret_here
+```
+
+### Step 5: Trigger a Test Event
+
+Send an email to one of your AgentMail inboxes, or use the console to send a test event. You should see the webhook received in your terminal:
+
+```
+127.0.0.1 - - [19/Jan/2026 16:57:20] "POST /webhooks HTTP/1.1" 204 -
+Received event: {'event_type': 'message.received', ...}
+```
+
+#### Ready for production?
+
+ngrok is great for local development, but for production you'll need to deploy your webhook server to a hosting provider. See the next section for deployment options.
+
+## Deploying to Production
+
+For production, you'll need to deploy your webhook server to a hosting provider that gives you a stable, public HTTPS URL. We recommend [Render](https://render.com/) for its simplicity and generous free tier.
+
+#### Other hosting options
+
+You can also deploy to other platforms like [Railway](https://railway.app/), [Fly.io](https://fly.io/), [Heroku](https://heroku.com/), or any cloud provider that supports Python web applications. The key requirements are a stable public HTTPS URL and the ability to set environment variables.
+
+## Best Practices
+
+#### Always verify in production
+
+While you might skip verification during local development, always enable it in production environments. A compromised webhook endpoint can be a serious security vulnerability.
+
+#### Use environment variables
+
+Never hardcode your signing secret. Use environment variables or a secrets manager:
+
+```python
+import os
+WEBHOOK_SECRET = os.environ["AGENTMAIL_WEBHOOK_SECRET"]
+```
+
+## Troubleshooting
+
+#### Signature verification fails
+
+* Ensure you're using the raw request body, not a parsed/modified version
+* Check that your signing secret is correct and matches the webhook endpoint
+* Verify you're extracting headers correctly (they're case-insensitive)
+* Make sure the timestamp hasn't expired (default tolerance is 5 minutes)
+
+#### Missing headers
+
+If headers are missing, ensure your server/framework isn't stripping them. Some reverse proxies may need configuration to pass through custom headers.
+
+#### Body parsing issues
+
+If you're using body-parsing middleware, make sure to access the raw body for verification. In Express, use `express.raw()` for your webhook route.
+
+#### [Webhook Setup](/webhook-setup)
+
+Complete guide to setting up webhooks with ngrok.
+
+#### [Webhook Events](/events)
+
+Explore all available webhook event types.

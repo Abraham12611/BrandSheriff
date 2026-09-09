@@ -1,0 +1,105 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# How do I prevent duplicate sends?
+
+AI agents can sometimes retry requests due to network errors, timeouts, or logic bugs. Without safeguards, this can cause the same email to be sent multiple times. Here is how to prevent that.
+
+## Idempotent resource creation with client\_id
+
+AgentMail supports idempotency for all **create** operations via the `clientId` parameter. When you provide a `clientId`, AgentMail checks if a resource with that ID already exists. If it does, it returns the existing resource instead of creating a duplicate.
+
+This works for creating inboxes, pods, webhooks, and drafts:
+
+```typescript title="TypeScript"
+import { AgentMailClient } from "agentmail";
+
+const client = new AgentMailClient({ apiKey: "am_..." });
+
+// Safe to call multiple times: only creates the inbox once
+const inbox = await client.inboxes.create({
+  username: "support",
+  clientId: "support-inbox-v1",
+});
+
+// Calling again with the same clientId returns the existing inbox
+const sameInbox = await client.inboxes.create({
+  username: "support",
+  clientId: "support-inbox-v1",
+});
+
+// inbox.inboxId === sameInbox.inboxId
+```
+
+## Preventing duplicate email sends
+
+The `clientId` parameter is for resource creation, not for `messages.send`. Sends are made idempotent with an **`Idempotency-Key` HTTP header** instead.
+
+Pass a unique key per logical send. A retry carrying the same key returns the original message and sends no second email; reusing a key with a different request (different content, inbox, or endpoint) returns `409 Conflict`. Keys expire 24 hours after the send completes.
+
+```typescript title="TypeScript"
+const key = `order-${orderId}-confirmation`; // unique per logical send, reused across retries
+
+const message = await client.inboxes.messages.send(
+  inbox.inboxId,
+  { to: ["customer@example.com"], subject: "Order confirmation", text: "Your order has been confirmed." },
+  { headers: { "Idempotency-Key": key } },
+);
+```
+
+See the [Idempotent Requests](/idempotency) guide for the full semantics. The application-side patterns below still help when you want to dedupe on your own business state (e.g. "have I already replied to this thread?").
+
+### Track sent messages with labels
+
+Use labels to mark messages that your agent has already processed, so it does not reply twice:
+
+```typescript title="TypeScript"
+// Before replying, check if already handled
+const threads = await client.inboxes.threads.list(inbox.inboxId, {
+  labels: ["unreplied"],
+});
+
+for (const thread of threads.threads) {
+  const detail = await client.threads.get(thread.threadId);
+  const lastMessage = detail.messages[detail.messages.length - 1];
+
+  // Reply and update labels atomically in your logic
+  await client.inboxes.messages.reply(inbox.inboxId, lastMessage.messageId, {
+    text: "Thanks for reaching out!",
+  });
+
+  await client.inboxes.messages.update(inbox.inboxId, lastMessage.messageId, {
+    addLabels: ["replied"],
+    removeLabels: ["unreplied"],
+  });
+}
+```
+
+### Use drafts for critical sends
+
+For high-stakes emails, use drafts instead of sending directly. Create a draft, verify it has not been sent already, then send:
+
+```typescript title="TypeScript"
+// Create a draft with a deterministic clientId
+const draft = await client.inboxes.drafts.create(inbox.inboxId, {
+  to: ["customer@example.com"],
+  subject: "Order confirmation",
+  text: "Your order has been confirmed.",
+  html: "<p>Your order has been confirmed.</p>",
+  clientId: "order-123-confirmation",
+});
+
+// Later, send the draft (only works once, draft is deleted after sending)
+const sent = await client.inboxes.drafts.send(inbox.inboxId, draft.draftId);
+```
+
+Since drafts support `clientId`, creating the same draft multiple times is safe. And once a draft is sent, it is deleted, so calling `drafts.send` again will fail rather than send a duplicate.
+
+## Best practices
+
+* **Use an `Idempotency-Key` header on sends** (`messages.send`, replies, forwards, `drafts.send`) so retries never duplicate an email
+* **Use `clientId` on all create operations** (inboxes, pods, webhooks, drafts) to make them safe to retry
+* **Generate `clientId` from your business logic** (e.g., `order-${orderId}-confirmation`), not random UUIDs
+* **Track state with labels** to prevent your agent from processing the same message twice
+* **Use drafts for critical sends** where duplicates would be harmful
+
+For more details, see the [Idempotent Requests](/idempotency) guide.

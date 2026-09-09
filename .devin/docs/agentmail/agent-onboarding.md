@@ -1,0 +1,327 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Agent Onboarding
+
+> Resources for AI coding assistants, MCP servers, skills, and agent-friendly documentation.
+
+> Everything you need to onboard your AI agent to AgentMail — the email platform built for AI agents.
+
+If you're developing with AI, AgentMail offers several resources to improve your experience.
+
+## Get an API key
+
+Your agent can sign up programmatically using the Agent API. No console access needed.
+
+```python title="Python"
+from agentmail import AgentMail
+
+client = AgentMail()
+response = client.agent.sign_up(human_email="you@example.com", username="my-agent")
+# response.api_key  -> store this securely
+# response.inbox_id -> my-agent@agentmail.to
+```
+
+```typescript title="TypeScript"
+import { AgentMailClient } from "agentmail";
+
+const client = new AgentMailClient();
+const response = await client.agent.signUp({ humanEmail: "you@example.com", username: "my-agent" });
+// response.apiKey  -> store this securely
+// response.inboxId -> my-agent@agentmail.to
+```
+
+```bash title="CLI"
+agentmail agent sign-up --human-email you@example.com --username my-agent
+```
+
+A 6-digit OTP is sent to the provided email. Verify to unlock full permissions:
+
+```python title="Python"
+client = AgentMail(api_key=response.api_key)
+client.agent.verify(otp_code="123456")
+```
+
+```typescript title="TypeScript"
+const authedClient = new AgentMailClient({ apiKey: response.apiKey });
+await authedClient.agent.verify({ otpCode: "123456" });
+```
+
+```bash title="CLI"
+agentmail agent verify --otp-code 123456
+```
+
+The sign-up endpoint is idempotent. Calling it again with the same email rotates the API key and resends the OTP if expired.
+
+**Unverified accounts can only send email to the signup address.** Until you complete OTP verification, sends to any other address are rejected with a `403` carrying `code: "message_rejected"`, whose `fix` explains that sending is restricted until verification and points at `POST /v0/agent/verify`. Always call `agent.verify()` before sending to external recipients. See the [Error Reference](/errors#message_rejected).
+
+**Some domains cannot be used for agent signup.** Common placeholder domains (e.g., `example.com`) and certain provider-specific domains are blocklisted. If signup fails, use a real email address from your own domain or a standard email provider.
+
+Alternatively, a human can create an account at [console.agentmail.to](https://console.agentmail.to) and generate an API key from the dashboard.
+
+AgentMail's free tier includes 3 inboxes and 3,000 emails/month. Your agent can start building immediately.
+
+## AgentMail MCP Server
+
+MCP (Model Context Protocol) is an open protocol that standardizes how applications provide context to LLMs. The AgentMail MCP server gives your AI agent tools to create inboxes, send emails, manage threads, and more.
+
+### Setup
+
+Add this to your MCP client configuration (Claude Code, Cursor, Codex, etc.). Clients that support remote MCP OAuth should use the bare URL and authenticate in-flow:
+
+```json
+{
+  "mcpServers": {
+    "AgentMail": {
+      "url": "https://mcp.agentmail.to/mcp"
+    }
+  }
+}
+```
+
+For clients that don't implement OAuth but support custom headers, pass the key as an `x-api-key` header instead:
+
+```json
+{
+  "mcpServers": {
+    "AgentMail": {
+      "url": "https://mcp.agentmail.to/mcp",
+      "headers": {
+        "x-api-key": "${AGENTMAIL_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Available MCP tools
+
+Your MCP client discovers tools directly from the hosted runtime. See the [current MCP tool catalog](/integrations/mcp#available-tools) for their names, descriptions, and availability.
+
+#### [MCP Server Setup](/integrations/mcp)
+
+Connect to the hosted AgentMail MCP server. npm and PyPI are compatibility transports for clients that only support stdio.
+
+## AgentMail Docs for Agents
+
+You can give your agent current docs in three ways:
+
+1. **Full documentation index**
+
+   A structured index of every doc page with descriptions:
+
+   ```
+   https://docs.agentmail.to/llms.txt
+   ```
+2. **Complete docs in one file**
+
+   Every doc page concatenated into a single file for full context:
+
+   ```
+   https://docs.agentmail.to/llms-full.txt
+   ```
+3. **Markdown versions of any page**
+
+   Every doc page is available as Markdown. Append `.md` to any page URL:
+
+   ```
+   https://docs.agentmail.to/quickstart.md
+   ```
+
+## AgentMail Skills
+
+Skills give AI agents specialized knowledge for specific tasks. Install the AgentMail skill to give your coding assistant full email capabilities:
+
+### Claude Code
+
+```bash
+claude-code skills install agentmail-to/agentmail-skills/agentmail
+```
+
+### Cursor
+
+```bash
+cursor skills install agentmail-to/agentmail-skills/agentmail
+```
+
+### Codex
+
+```bash
+codex skills install agentmail-to/agentmail-skills/agentmail
+```
+
+### Manual Installation
+
+```bash
+git clone https://github.com/agentmail-to/agentmail-skills.git ~/.skills/agentmail
+```
+
+Then set your API key:
+
+```bash
+export AGENTMAIL_API_KEY="your-api-key-here"
+```
+
+#### [Skills on GitHub](https://github.com/agentmail-to/agentmail-skills)
+
+View the skill source and full documentation.
+
+## Quick start for agents
+
+Sign up, create an inbox, and send your first email:
+
+```python title="Python"
+from agentmail import AgentMail
+
+# sign up (no API key needed)
+client = AgentMail()
+response = client.agent.sign_up(human_email="you@example.com", username="my-agent")
+
+# after verifying with the OTP sent to your email:
+client = AgentMail(api_key=response.api_key)
+client.agent.verify(otp_code="123456")
+
+# create an inbox and send an email
+inbox = client.inboxes.create(display_name="My AI Agent")
+print(f"Agent email: {inbox.inbox_id}")
+
+client.inboxes.messages.send(
+    inbox.inbox_id,
+    to="user@example.com",
+    subject="Hello from my AI agent",
+    text="Hi! I'm an AI agent with my own email address."
+)
+```
+
+```typescript title="TypeScript"
+import { AgentMailClient } from "agentmail";
+
+// sign up (no API key needed)
+const client = new AgentMailClient();
+const response = await client.agent.signUp({ humanEmail: "you@example.com", username: "my-agent" });
+
+// after verifying with the OTP sent to your email:
+const authedClient = new AgentMailClient({ apiKey: response.apiKey });
+await authedClient.agent.verify({ otpCode: "123456" });
+
+// create an inbox and send an email
+const inbox = await authedClient.inboxes.create({ displayName: "My AI Agent" });
+console.log(`Agent email: ${inbox.inboxId}`);
+
+await authedClient.inboxes.messages.send(inbox.inboxId, {
+    to: "user@example.com",
+    subject: "Hello from my AI agent",
+    text: "Hi! I'm an AI agent with my own email address."
+});
+```
+
+```bash title="CLI"
+# sign up and verify
+agentmail agent sign-up --human-email you@example.com --username my-agent
+agentmail agent verify --otp-code 123456
+
+# create an inbox
+agentmail inboxes create --display-name "My AI Agent"
+
+# send an email (replace <inbox_id> with the id from above)
+agentmail inboxes messages send \
+  --inbox-id <inbox_id> \
+  --to user@example.com \
+  --subject "Hello from my AI agent" \
+  --text "Hi! I'm an AI agent with my own email address."
+```
+
+Already have an API key? Skip the sign-up step and initialize the client directly with your key.
+
+### Receive and reply to emails
+
+```python title="Python"
+# List threads in the inbox
+threads = client.inboxes.threads.list(inbox_id=inbox.inbox_id)
+
+# Get the latest thread
+thread = client.inboxes.threads.get(
+    inbox_id=inbox.inbox_id,
+    thread_id=threads.threads[0].thread_id
+)
+
+# Reply to the latest message
+latest_message = thread.messages[-1]
+client.inboxes.messages.reply(
+    inbox_id=inbox.inbox_id,
+    message_id=latest_message.message_id,
+    to=[latest_message.from_],
+    text="Thanks for your email! I'll look into this."
+)
+```
+
+```typescript title="TypeScript"
+// List threads in the inbox
+const threads = await authedClient.inboxes.threads.list(inbox.inboxId);
+
+// Get the latest thread
+const thread = await authedClient.inboxes.threads.get(
+    inbox.inboxId,
+    threads.threads[0].threadId
+);
+
+// Reply to the latest message
+const latestMessage = thread.messages[thread.messages.length - 1];
+await authedClient.inboxes.messages.reply(
+    inbox.inboxId,
+    latestMessage.messageId,
+    { to: [latestMessage.from], text: "Thanks for your email! I'll look into this." }
+);
+```
+
+## AI Builder Integrations
+
+AgentMail integrates with popular AI development platforms:
+
+#### [Replit](/integrations/replit)
+
+Build email agents on Replit with our template.
+
+#### [LiveKit](/integrate-livekit-agents)
+
+Add email to LiveKit voice agents.
+
+#### [OpenClaw](/integrations/openclaw)
+
+Use AgentMail with OpenClaw agents.
+
+#### [WebSockets](/websockets)
+
+Real-time email events without webhooks.
+
+## What Makes AgentMail Different?
+
+Unlike traditional email APIs that are built for one-way transactional email, AgentMail is built for **two-way agent communication**:
+
+| Feature                | AgentMail                  | Traditional Email APIs    |
+| ---------------------- | -------------------------- | ------------------------- |
+| Per-agent inboxes      | ✅ Create thousands via API | ❌ Shared sending domains  |
+| Receive & parse emails | ✅ Native with threads      | ⚠️ Limited or add-on      |
+| Threaded conversations | ✅ First-class API support  | ❌ Not supported           |
+| Allowlists/blocklists  | ✅ Per-inbox controls       | ❌ Not available           |
+| Multi-tenant (Pods)    | ✅ Built-in isolation       | ❌ Build it yourself       |
+| WebSocket events       | ✅ Real-time streaming      | ❌ Webhooks only           |
+| IMAP/SMTP access       | ✅ Full protocol support    | ❌ API-only                |
+| Usage-based pricing    | ✅ Pay per email            | ❌ Per-inbox subscriptions |
+
+## Next Steps
+
+#### [Full Quickstart Guide](/quickstart)
+
+Step-by-step setup with environment variables and best practices.
+
+#### [API Reference](/api-reference)
+
+Full interactive API documentation.
+
+#### [Example: Auto-Reply Agent](/examples/auto-reply-agent)
+
+Build an agent that responds to emails in real-time.
+
+#### [FAQ](/resources/faq)
+
+Answers to common questions about email, deliverability, and agent patterns.

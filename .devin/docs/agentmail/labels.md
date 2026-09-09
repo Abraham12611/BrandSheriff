@@ -1,0 +1,253 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Labels
+
+> Learn how to use Labels to manage state, track campaigns, and filter messages for powerful agentic workflows.
+
+## What are `Labels`?
+
+`Labels` are simple, string-based tags that you can attach to your `Messages` and `Threads`. They are the primary mechanism for organizing, categorizing, and managing the state of your conversations, whether its automatically bucketing threads into specific categories for your outbound campaign, to segmenting warm leads for your outreach, to categorizing inbound into low-ticket, medium-ticket, high-ticket customers.
+
+A `Message` can have multiple `Labels`, allowing you to create a flexible and powerful system for managing complex workflows.
+
+## Use Cases for `Labels`
+
+By strategically applying `Labels`, you can build sophisticated agent systems. Here are a few common use cases:
+
+#### State Management
+
+Use `Labels` to track the state of a conversation. For example, an agent
+could apply `needs-human-review` when it's unsure how to respond, or a
+supervisor could apply `approved-to-send` to a `Draft`.
+
+#### Campaign Tracking
+
+When running outbound campaigns, tag every `Message` with a unique campaign
+`Label` like `q4-2024-outreach`, or `mercor-campaign` and adding a second
+tag as `warm-lead`. This allows you to easily filter for and analyze the
+performance of that specific campaign later on.
+
+#### Automated Triage
+
+An inbound agent can classify incoming `Messages` with `Labels` like
+`billing-question`, `feature-request`, or `bug-report`, allowing specialized
+agents or human teams to handle them efficiently.
+
+#### Read/Unread Tracking
+
+Use `Labels` to track which `Messages` your agent has already processed.
+After handling a `Message`, add a `read` label and remove `unread`. Then
+filter by `labels=["unread"]` to only fetch new messages — preventing your
+agent from reprocessing the same emails. See [Marking Messages as Read](/messages#marking-messages-as-read) for code examples.
+
+## Core Capabilities
+
+Here's how you can programmatically work with `Labels`.
+
+### 1. Adding `Labels` When Sending a `Message`
+
+You can attach an array of `Labels` directly when you send a `Message`.
+
+```python title="Python"
+sent_message = client.inboxes.messages.send(
+    inbox_id="outbound@agentmail.to",
+    to=["test@example.com"],
+    subject="Following up on our conversation",
+    text="Here is the information you requested.",
+    labels=["follow-up", "q4-campaign"]
+)
+```
+
+```typescript title="TypeScript"
+const sentMessage = await client.inboxes.messages.send(
+  "outbound@agentmail.to",
+  {
+    to: ["test@example.com"],
+    subject: "Following up on our conversation",
+    text: "Here is the information you requested.",
+    labels: ["follow-up", "q4-campaign"],
+  }
+);
+```
+
+```bash title="CLI"
+# send a message with labels
+agentmail inboxes messages send \
+  --inbox-id outbound@agentmail.to \
+  --to test@example.com \
+  --subject "Following up on our conversation" \
+  --text "Here is the information you requested." \
+  --labels follow-up \
+  --labels q4-campaign
+```
+
+### 2. Adding or Removing `Labels` on an Existing `Message`
+
+You can modify the `Labels` on a `Message` that has already been sent using the `update` (PATCH) method. This is perfect for changing the state of a conversation as your agent works on it.
+
+```python
+# Let's add a 'resolved' label to a message
+
+client.messages.update(
+inbox_id='outbound@domain.com',
+message_id='<abc123@agentmail.to>',
+add_labels=["resolved"],
+remove_labels=['unresolved']
+)
+
+```
+
+```typescript title="TypeScript"
+// Let's add a 'resolved' label to a message
+
+
+await client.inboxes.messages.update(
+  "my_inbox@domain.com",
+  "<abc123@agentmail.to>",
+  {
+    addLabels: [
+        "resolved"
+    ],
+    removeLabels: [
+        "unresolved"
+    ]
+  }
+)
+
+```
+
+```bash title="CLI"
+# add and remove labels on an existing message
+agentmail inboxes messages update \
+  --inbox-id outbound@domain.com \
+  --message-id "<abc123@agentmail.to>" \
+  --add-labels resolved \
+  --remove-labels unresolved
+```
+
+#### Moving to trash
+
+To move a `Message` or `Thread` to trash, add the `trash` `Label` to it with
+the update (PATCH) method — the same way you add any other `Label`. Reads and
+searches exclude trashed items by default. To remove it from trash, remove the
+`trash` `Label`.
+
+Note this is distinct from the [Delete Thread](/api-reference/threads/delete)
+and [Delete Message](/api-reference/messages/delete) endpoints, which
+permanently delete the resource and all of its data.
+
+### 3. Filtering by `Labels`
+
+This is where `Labels` become truly powerful. You can list `Threads`, `Messages`, and `Drafts` by filtering for one or more `Labels`, allowing you to create highly targeted queries.
+
+```python
+# Find all threads from a specific campaign that need a follow-up
+filtered_threads = client.inboxes.threads.list(
+    inbox_id = 'outbound-agent@domain.com',
+    labels=[
+        "q4-campaign",
+        "follow_up"
+    ]
+)
+
+print(f"Found {filtered_threads.count} threads that need a follow-up.")
+
+```
+
+```typescript title="TypeScript"
+// Find all threads from a specific campaign that need a follow-up
+const filteredThreads = await client.inboxes.threads.list(
+  "leads@agentmail.to",
+  {
+    labels: [
+      "q4-campaign",
+      "follow_up"
+    ]
+  }
+)
+
+
+console.log(`Found ${filteredThreads.count} threads that need a follow-up.`);
+```
+
+```bash title="CLI"
+# list threads filtered by labels
+agentmail inboxes threads list \
+  --inbox-id outbound-agent@domain.com \
+  --labels q4-campaign
+```
+
+## Copy for Cursor / Claude
+
+Copy one of the blocks below into Cursor or Claude for complete Labels usage in one shot.
+
+```python title="Python"
+"""
+AgentMail Labels — copy into Cursor/Claude.
+
+Labels are string tags on Messages and Threads for state, campaigns, triage.
+
+- Send: messages.send(..., labels=["campaign", "follow-up"])
+- Update: inboxes.messages.update(inbox_id, message_id, add_labels=[...], remove_labels=[...])
+- Filter: messages.list(inbox_id, labels=[...]), threads.list(inbox_id, labels=[...]), drafts.list(inbox_id, labels=[...])
+
+Use kebab-case or snake_case consistently.
+"""
+from agentmail import AgentMail
+
+client = AgentMail(api_key="YOUR_API_KEY")
+
+# Send with labels
+client.inboxes.messages.send("out@agentmail.to", to="user@example.com", subject="Hi", text="Body", labels=["q4-campaign"])
+
+# Update labels
+client.inboxes.messages.update("out@agentmail.to", "<abc123@agentmail.to>", add_labels=["resolved"], remove_labels=["pending"])
+
+# Filter by labels
+threads = client.inboxes.threads.list("out@agentmail.to", labels=["q4-campaign", "follow-up"])
+```
+
+```typescript title="TypeScript"
+/**
+ * AgentMail Labels — copy into Cursor/Claude.
+ *
+ * Labels are string tags on Messages and Threads for state, campaigns, triage.
+ *
+ * - Send: messages.send(inboxId, { ..., labels: ["campaign", "follow-up"] })
+ * - Update: messages.update(inboxId, messageId, { addLabels: [...], removeLabels: [...] })
+ * - Filter: messages.list(inboxId, { labels: [...] }), threads.list(inboxId, { labels: [...] }), drafts.list(inboxId, { labels: [...] })
+ *
+ * Use kebab-case or camelCase consistently.
+ */
+import { AgentMailClient } from "agentmail";
+
+const client = new AgentMailClient({ apiKey: "YOUR_API_KEY" });
+
+async function main() {
+  await client.inboxes.messages.send("out@agentmail.to", {
+    to: "user@example.com",
+    subject: "Hi",
+    text: "Body",
+    labels: ["q4-campaign"],
+  });
+  await client.inboxes.messages.update("out@agentmail.to", "<abc123@agentmail.to>", {
+    addLabels: ["resolved"],
+    removeLabels: ["pending"],
+  });
+  const threads = await client.inboxes.threads.list("out@agentmail.to", { labels: ["q4-campaign", "follow-up"] });
+}
+main();
+```
+
+## Best Practices
+
+* **Be Consistent:** Establish a clear and consistent naming convention for your labels (e.g., `kebab-case`, `snake_case`).
+* **Use Prefixes:** For state management, consider using prefixes like `status-pending` or `priority-high` to create an organized system.
+* **Don't Over-Label:** While you can add many `Labels`, aim for a concise and meaningful set to keep your system manageable.
+
+#### Coming Soon: AI-Powered Auto-Labeling
+
+We are actively developing an AI-powered auto-labeling feature. Soon, your
+agents will be able to provide a set of `Labels` and instructions, and
+AgentMail will automatically apply the correct `Labels` to incoming `Messages`
+based on their content.

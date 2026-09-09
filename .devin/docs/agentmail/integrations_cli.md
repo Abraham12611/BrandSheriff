@@ -1,0 +1,188 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# CLI
+
+> AgentMail's official command-line interface
+
+## Getting started
+
+The AgentMail CLI lets you interact with the AgentMail API directly from your terminal. Create inboxes, send messages, manage threads, and more — all without writing code. It ships as a single native binary with no runtime dependencies.
+
+### Installation
+
+Install with npm:
+
+```bash
+npm install -g agentmail-cli
+```
+
+Or install from the release script, which picks the right binary for your machine:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/agentmail-to/agentmail-cli/releases/latest/download/agentmail-cli-installer.sh | sh
+```
+
+Both paths give you a statically linked binary with no system dependencies, on any Linux distribution. Prebuilt archives are also on the [releases page](https://github.com/agentmail-to/agentmail-cli/releases) — see [Platform support](#platform-support) before picking one by hand.
+
+#### Platform support
+
+| Platform                                          | Requirement                                                                                                                                                                                     |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS                                             | 11+ (Apple Silicon and Intel)                                                                                                                                                                   |
+| Linux — npm, or `agentmail-cli-installer.sh`      | None. You get the static musl build.                                                                                                                                                            |
+| Linux — `*-linux-musl.tar.gz` downloaded manually | None. Runs on Alpine and on `scratch`/distroless images.                                                                                                                                        |
+| Linux — `*-linux-gnu.tar.gz` downloaded manually  | **glibc 2.34+ and OpenSSL 3.** Debian 12 needs `apt install libssl3`; Ubuntu 20.04, Amazon Linux 2, and other glibc \< 2.34 distributions cannot run this build — use the musl archive instead. |
+| Windows                                           | x64. On Windows ARM64 the installer currently fetches the x64 binary.                                                                                                                           |
+
+If a manually downloaded `-gnu` binary fails to start, the error names only the first thing it cannot find, which makes two different problems look alike:
+
+```
+error while loading shared libraries: libssl.so.3: cannot open shared object file
+```
+
+On Debian 12 that really is just the library — install `libssl3` and it works. On older distributions the same message hides a glibc floor you cannot install past (`GLIBC_2.34 not found` appears once OpenSSL is present). Rather than diagnosing it, switch to the musl archive, which has no such requirements.
+
+### Authentication
+
+Set your API key as an environment variable:
+
+```bash
+export AGENTMAIL_API_KEY=am_us_xxx
+```
+
+Or store it in your OS keychain so it survives across shells:
+
+```bash
+agentmail auth login --with-token --scheme BearerAuth   # paste your API key when prompted
+agentmail auth status                                   # shows which credential source is active
+```
+
+Get your key from the [AgentMail Console](https://console.agentmail.to).
+
+## Usage
+
+Commands follow the resource structure of the API, with nested subcommands:
+
+```bash
+agentmail <resource> [subresource] <command> [flags...]
+```
+
+```bash
+agentmail inboxes messages send --inbox-id inb_xxx --to user@example.com --subject "Hello" --text "Hi there"
+```
+
+Use `--help` on any command for details, or `--schema` for a machine-readable description of every command — useful when an AI agent is driving the CLI.
+
+### Examples
+
+```bash
+# List inboxes
+agentmail inboxes list
+
+# Create an inbox
+agentmail inboxes create --display-name "My Inbox"
+
+# Send a message
+agentmail inboxes messages send \
+  --inbox-id inb_xxx \
+  --to user@example.com \
+  --subject "Hello" \
+  --text "Hi there"
+
+# Preview the request without sending it
+agentmail inboxes messages send --dry-run \
+  --inbox-id inb_xxx \
+  --to user@example.com \
+  --subject "Hello" \
+  --text "Hi there"
+
+# List threads
+agentmail inboxes threads list --inbox-id inb_xxx
+
+# Create a webhook
+agentmail webhooks create \
+  --event-types message.received \
+  --url https://example.com/webhook
+```
+
+## Features
+
+The CLI provides commands for:
+
+* **Inbox management:** Create, list, update, and delete inboxes
+* **Message operations:** Send, reply, forward, and read emails
+* **Thread management:** List, search, and manage email threads
+* **Drafts:** Create, update, send, and delete drafts
+* **Webhooks:** Create and manage webhook endpoints
+* **Domains:** Add and verify custom domains
+* **Pods:** Manage pod resources and their inboxes
+* **API keys:** Create and manage API keys
+
+## Global flags
+
+| Flag         | Description                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `--format`   | Output format: `json`, `table`, `yaml`, `csv`, `raw`, `jsonl`, `http`. Default: `table` on a terminal, `json` when piped |
+| `--dry-run`  | Validate and print the request locally without sending it                                                                |
+| `--base-url` | Override the API base URL (or set `AGENTMAIL_BASE_URL`)                                                                  |
+| `--schema`   | Print a machine-readable JSON schema for the current scope                                                               |
+| `--quiet`    | Suppress stdout on success (errors still go to stderr)                                                                   |
+| `--help`     | Show help                                                                                                                |
+| `--version`  | Show version                                                                                                             |
+
+Request-bearing commands additionally accept `--json <JSON|->` to supply the whole request body as JSON (or from stdin), `--params <JSON>` to merge extra parameters, and `--query <EXPR>` to filter output with a [JMESPath](https://jmespath.org) expression.
+
+Shell completions (`agentmail completion`) and man pages (`agentmail man`) are built in.
+
+## Known limitations
+
+* **Windows npm package** — `npm install -g agentmail-cli` does not yet install a Windows binary. Windows users should install from the [GitHub releases page](https://github.com/agentmail-to/agentmail-cli/releases) (`agentmail-cli-installer.ps1`), which ships the same binary. On Windows ARM64 that installer fetches the x64 binary, which runs under emulation.
+* **`--dry-run` is not an acceptance guarantee.** Flag values are type-checked locally, so `--limit abc` fails before a request is made. `--dry-run` then shows the request that would be sent — the API can still reject it on grounds the CLI cannot check, such as an unknown ID or a permission error.
+* **No auto-pagination.** List commands return one page. Paginate manually: pass `--limit`, read `next_page_token` from the response, and pass it back as `--page-token`.
+
+## Upgrading to 1.2
+
+`AGENTMAIL_TOKEN` is no longer read. Versions 1.0 and 1.1 accepted it as an alternative to
+`AGENTMAIL_API_KEY`; no other AgentMail surface ever used it, and it has been removed. If you
+set it, switch to the standard variable:
+
+```bash
+export AGENTMAIL_API_KEY="$AGENTMAIL_TOKEN"
+```
+
+Nothing else changed — commands, flags and output formats are identical to 1.1. Query flags are
+now type-checked locally, so an invalid `--limit abc` fails before a request is made instead of
+returning a 400 from the API.
+
+## Upgrading from 0.7.x
+
+Version 1.0 is a full rewrite, and some invocations changed:
+
+| 0.7.x                                       | 1.0                                                                                     |
+| ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `agentmail inboxes:messages send ...`       | `agentmail inboxes messages send ...` (spaces, not colons)                              |
+| `agentmail inboxes retrieve ...`            | `agentmail inboxes get ...`                                                             |
+| `agentmail threads retrieve-attachment ...` | `agentmail threads get-attachment ...`                                                  |
+| `--format pretty` / `explore`               | `--format table` (default on a terminal); `raw` and `jsonl` still work, plus new `http` |
+| `--transform` (GJSON)                       | `--query` (JMESPath)                                                                    |
+| `--api-key` flag                            | `AGENTMAIL_API_KEY` env var or `agentmail auth login --with-token --scheme BearerAuth`  |
+
+Environment variables are unchanged: `AGENTMAIL_API_KEY` keeps working as before.
+
+If you pin an older 0.7.x release, note that it installs its binary through a `postinstall` script. npm 12 blocks install scripts by default, so on npm 12 or newer a 0.7.x install completes but leaves no working binary — `agentmail` then fails with `spawnSync … bin/.agentmail ENOENT`. Version 1.0 and later ship the binary inside the package and are unaffected.
+
+## AI skill
+
+The CLI can generate [AgentSkills](https://skills.sh)-compatible skill files directly from its own command surface:
+
+```bash
+agentmail generate-skills --output-dir skills
+```
+
+It is also available as a prebuilt skill:
+
+```bash
+openclaw skills install agentmail-to/agentmail-skills/agentmail-cli
+```
+
+This works with any compatible tool, including OpenClaw, Claude Code, Cursor, and Codex. See the [Skills](/integrations/skills) page for more details.

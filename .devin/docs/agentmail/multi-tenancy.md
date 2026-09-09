@@ -1,0 +1,273 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Guide: Multi-Tenancy
+
+> How to use pods, scoped API keys, and webhook filtering to build multi-tenant email on AgentMail.
+
+If you're building a platform where each of your customers needs their own email infrastructure, this is how you set it up. The basic idea: create a `Pod` per customer, give them a scoped API key, and route webhook events to the right place.
+
+## Pods = Tenant Isolation
+
+Every tenant gets their own `Pod`. All their resources (`Inboxes`, `Domains`, `Threads`, `Drafts`) live inside it and are completely isolated from other pods. Check out the [Pods](/pods) page for the full breakdown.
+
+```python
+from agentmail import AgentMail
+
+client = AgentMail()
+
+# Use client_id to map to your internal tenant ID so
+# you don't need to maintain a separate mapping table
+pod = client.pods.create(client_id="tenant-acme-123")
+```
+
+```typescript
+import { AgentMailClient } from "agentmail";
+
+const client = new AgentMailClient({ apiKey: process.env.AGENTMAIL_API_KEY! });
+
+const pod = await client.pods.create({ clientId: "tenant-acme-123" });
+```
+
+Then provision their resources:
+
+```python
+inbox = client.pods.inboxes.create(
+    pod.pod_id,
+    username="support",
+    display_name="Acme Support"
+)
+
+domain = client.pods.domains.create(pod.pod_id, domain="acme.com")
+```
+
+```typescript
+const inbox = await client.pods.inboxes.create(pod.podId, {
+  username: "support",
+  displayName: "Acme Support",
+});
+
+const domain = await client.pods.domains.create(pod.podId, {
+  domain: "acme.com",
+});
+```
+
+```bash title="CLI"
+# create an inbox in the pod
+agentmail pods inboxes create \
+  --pod-id <pod-id> \
+  --username support \
+  --display-name "Acme Support"
+
+# add a custom domain to the pod
+agentmail pods domains create \
+  --pod-id <pod-id> \
+  --domain acme.com
+```
+
+## Scoped API Keys
+
+By default, API keys are organization-level and can access everything across all pods. Scoped API keys restrict access to a single pod or a single inbox. If a key is scoped to Acme's pod, it can only touch Acme's resources. Nothing else.
+
+This is useful when you want to hand a key to a tenant's service or agent without exposing your whole org.
+
+### Pod-scoped keys
+
+Pod-scoped keys can access all resources within a pod (inboxes, threads, drafts, domains).
+
+```python
+# Create a key that can only access Acme's pod
+scoped_key = client.pods.api_keys.create(
+    pod.pod_id,
+    name="acme-service-key"
+)
+
+# This is the only time you'll see the full key, so store it
+print(scoped_key.api_key)
+```
+
+```typescript
+const scopedKey = await client.pods.apiKeys.create(pod.podId, {
+  name: "acme-service-key",
+});
+
+// This is the only time you'll see the full key, so store it
+console.log(scopedKey.apiKey);
+```
+
+```bash title="CLI"
+# create a key scoped to acme's pod
+agentmail pods api-keys create \
+  --pod-id <pod-id> \
+  --name "acme-service-key"
+```
+
+### Inbox-scoped keys
+
+Inbox-scoped keys are even more restrictive: they only grant access to a single inbox and its threads, messages, and drafts. Use these when an agent or integration only needs to operate on one address.
+
+```python
+# Create a key that can only access the support inbox
+inbox_key = client.inboxes.api_keys.create(
+    inbox.inbox_id,
+    name="support-inbox-key"
+)
+
+print(inbox_key.api_key)
+```
+
+```typescript
+const inboxKey = await client.inboxes.apiKeys.create(inbox.inboxId, {
+  name: "support-inbox-key",
+});
+
+console.log(inboxKey.apiKey);
+```
+
+The full API key is only returned **once** at creation. If you lose it, delete it and create a new one.
+
+You can list and delete scoped keys for any pod or inbox:
+
+```python
+# Pod-scoped keys
+keys = client.pods.api_keys.list(pod.pod_id)
+client.pods.api_keys.delete(pod.pod_id, scoped_key.api_key_id)
+
+# Inbox-scoped keys
+inbox_keys = client.inboxes.api_keys.list(inbox.inbox_id)
+client.inboxes.api_keys.delete(inbox.inbox_id, inbox_key.api_key_id)
+```
+
+```typescript
+// Pod-scoped keys
+const keys = await client.pods.apiKeys.list(pod.podId);
+await client.pods.apiKeys.delete(pod.podId, scopedKey.apiKeyId);
+
+// Inbox-scoped keys
+const inboxKeys = await client.inboxes.apiKeys.list(inbox.inboxId);
+await client.inboxes.apiKeys.delete(inbox.inboxId, inboxKey.apiKeyId);
+```
+
+## Routing Webhook Events
+
+You probably don't want a single webhook catching events for every tenant. When creating a `Webhook`, you can scope it to specific `pod_ids` or `inbox_ids` so events only fire for the resources you care about.
+
+```python
+# Only fires for events in Acme's pod
+webhook = client.webhooks.create(
+    url="https://your-server.com/webhooks/acme",
+    event_types=["message.received", "message.sent"],
+    pod_ids=[pod.pod_id]
+)
+
+# Or narrow it down to specific inboxes
+webhook = client.webhooks.create(
+    url="https://your-server.com/webhooks/acme-support",
+    event_types=["message.received"],
+    inbox_ids=[inbox.inbox_id]
+)
+```
+
+```typescript
+const webhook = await client.webhooks.create({
+  url: "https://your-server.com/webhooks/acme",
+  eventTypes: ["message.received", "message.sent"],
+  podIds: [pod.podId],
+});
+
+// Or narrow it down to specific inboxes
+const inboxWebhook = await client.webhooks.create({
+  url: "https://your-server.com/webhooks/acme-support",
+  eventTypes: ["message.received"],
+  inboxIds: [inbox.inboxId],
+});
+```
+
+## Full Onboarding Flow
+
+Here's what onboarding a new tenant looks like end to end:
+
+```python
+from agentmail import AgentMail
+
+client = AgentMail()
+
+def onboard_tenant(tenant_id: str, domain_name: str):
+    # Create isolated pod
+    pod = client.pods.create(client_id=tenant_id)
+
+    # Provision inbox + domain
+    inbox = client.pods.inboxes.create(
+        pod.pod_id,
+        username="support",
+        display_name=f"{tenant_id} Support"
+    )
+    domain = client.pods.domains.create(pod.pod_id, domain=domain_name)
+
+    # Pod-scoped key for the tenant
+    key = client.pods.api_keys.create(pod.pod_id, name=f"{tenant_id}-key")
+
+    # Inbox-scoped key for the support inbox
+    inbox_key = client.inboxes.api_keys.create(
+        inbox.inbox_id, name=f"{tenant_id}-support-key"
+    )
+
+    # Webhook for their events
+    webhook = client.webhooks.create(
+        url=f"https://your-server.com/webhooks/{tenant_id}",
+        event_types=["message.received"],
+        pod_ids=[pod.pod_id]
+    )
+
+    return {
+        "pod_id": pod.pod_id,
+        "inbox_id": inbox.inbox_id,
+        "pod_api_key": key.api_key,  # deliver securely to tenant
+        "inbox_api_key": inbox_key.api_key,
+        "webhook_id": webhook.webhook_id,
+    }
+```
+
+```typescript
+import { AgentMailClient } from "agentmail";
+
+const client = new AgentMailClient({ apiKey: process.env.AGENTMAIL_API_KEY! });
+
+async function onboardTenant(tenantId: string, domainName: string) {
+  // Create isolated pod
+  const pod = await client.pods.create({ clientId: tenantId });
+
+  // Provision inbox + domain
+  const inbox = await client.pods.inboxes.create(pod.podId, {
+    username: "support",
+    displayName: `${tenantId} Support`,
+  });
+  const domain = await client.pods.domains.create(pod.podId, {
+    domain: domainName,
+  });
+
+  // Pod-scoped key for the tenant
+  const key = await client.pods.apiKeys.create(pod.podId, {
+    name: `${tenantId}-key`,
+  });
+
+  // Inbox-scoped key for the support inbox
+  const inboxKey = await client.inboxes.apiKeys.create(inbox.inboxId, {
+    name: `${tenantId}-support-key`,
+  });
+
+  // Webhook for their events
+  const webhook = await client.webhooks.create({
+    url: `https://your-server.com/webhooks/${tenantId}`,
+    eventTypes: ["message.received"],
+    podIds: [pod.podId],
+  });
+
+  return {
+    podId: pod.podId,
+    inboxId: inbox.inboxId,
+    podApiKey: key.apiKey, // deliver securely to tenant
+    inboxApiKey: inboxKey.apiKey,
+    webhookId: webhook.webhookId,
+  };
+}
+```

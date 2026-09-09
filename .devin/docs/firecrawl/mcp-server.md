@@ -1,0 +1,61 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://docs.firecrawl.dev/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# Get Started
+
+> Set up Firecrawl MCP with keyless access, account sign-in, or an API key.
+
+Choose how the connection will authenticate. Signing in and adding an API key are two paths to the same access: both reach the full tool surface on your team's plan.
+
+<CardGroup cols={3}>
+  <Card title="Try Instantly" icon="bolt" href="/mcp-server/keyless#try-keyless" cta="Start keyless setup" arrow>
+    No account or key. Search, Scrape, and Parse within daily limits.
+  </Card>
+
+  <Card title="Sign in" icon="right-to-bracket" href="/mcp-server/oauth" cta="Connect account" arrow>
+    Browser sign-in from Codex, Claude Code, or your favorite harness.
+  </Card>
+
+  <Card title="Use an API key" icon="key" href="/mcp-server/keyless#add-an-api-key" cta="Configure an API key" arrow>
+    Configure an API key in your client, no browser needed.
+  </Card>
+</CardGroup>
+
+## Add an API key
+
+[Create a Firecrawl API key](https://www.firecrawl.dev/app/api-keys), then add it as a bearer token in your client config:
+
+```json theme={null}
+{
+  "mcpServers": {
+    "firecrawl": {
+      "type": "http",
+      "url": "https://mcp.firecrawl.dev/v2/mcp",
+      "headers": {
+        "Authorization": "Bearer <FIRECRAWL_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+Configure the key through an environment variable or your client's secret storage, never in the MCP URL.
+
+<Note>
+  This is a server URL for your MCP client, not a page to open directly in a browser. Sign-in connections use `https://mcp.firecrawl.dev/v2/mcp-oauth` instead, and your client starts the browser flow.
+</Note>
+
+## Client setup
+
+<CardGroup cols={2}>
+  <Card title="For Agents" icon="robot" href="/mcp-server/keyless">
+    Start keyless or use an API key.
+  </Card>
+
+  <Card title="For Humans" icon="user" href="/mcp-server/oauth">
+    Sign in via browser.
+  </Card>
+</CardGroup>
+
+Next: [choose a tool](/mcp-server/tools) or [run the server locally](/mcp-server/local).

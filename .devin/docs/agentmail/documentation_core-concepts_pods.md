@@ -1,0 +1,284 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Pods
+
+> Learn how to use pods for multi-tenant email management
+
+## What are Pods?
+
+Pods are an isolated abstraction that sits between your **organization** and your **inboxes**, providing a method to segment and organize email infrastructure for multi-tenant applications. If you're building a service that offers email functionality to your customers, pods are your key to ensure customer resource isolation.
+
+### The Hierarchy
+
+```
+Organization (Your Business)
+    └── Pod (Your Customer A)
+        ├── Inbox 1
+        ├── Inbox 2
+        └── Domain 1
+    └── Pod (Your Customer B)
+        ├── Inbox 3
+        ├── Inbox 4
+        └── Domain 2
+```
+
+**Organization**: Your company's AgentMail account
+
+* You have one organization that represents your business
+
+**Pod**: Each of your customers
+
+* Create one pod per customer/tenant in your system
+* Pods provide complete isolation between your customers' data
+* All resources (inboxes, domains, threads, drafts) can be scoped to a pod
+
+**Inbox**: Individual email accounts within a pod
+
+* Your customers can have multiple inboxes within their pod
+* It is on you to provision resources for each of your customers
+
+## Why Use Pods?
+
+### Multi-Tenancy
+
+Pods enable you to offer AgentMail's email infrastructure to your own customers while maintaining strict data isolation. Here's how our customers use pods:
+
+**SaaS/Agency Platforms**: Create a pod for each customer account. Each customer gets their own isolated email workspace.
+
+**White-Label Email**: Offer email services under your own brand. Each end-user gets their own pod with complete data isolation.
+
+**AI Agent Platforms**: Give each AI agent with its own purpose its own pod with dedicated inboxes and domains.
+
+## How Pods Work
+
+### Pod Lifecycle
+
+As a basis, here are a couple of logistical stuff that happens on the API side when you create resources.
+
+* When you sign up, you are automatically created a `Default Pod`, and all resources created whether its `Inboxes` or `Domains` all are associated with this `Default Pod`.
+* You cannot delete a `Pod` that has existing children resources. Make sure to delete any existing `Inboxes` or `Domains` before deleting a `Pod`.
+
+### What You Can Do With Pods
+
+#### Creating Resources
+
+You can create the following resources **within** a pod:
+
+* **Inboxes**
+* **Domains**
+
+NOTE: as of now domains can only be either scoped to one pod, or all pods. I.E
+it is not possible to create a domain scoped to more than one but not all
+pods.
+
+TIP: specify a `client_id` when creating a `Pod` so that you can decide how to
+uniquely identify pods. That way you don't need to create a table mapping your
+`organization_id`'s for your customers or segment of your business to our
+`pod_id`'s you can just set the `client_id` as your internal id so you can
+access the resource using a unique identifier determined by you!
+
+These resources are automatically associated with the pod and inherit its isolation guarantees.
+
+#### Listing Resources
+
+You can list the following resources **scoped to** a pod:
+
+* **Inboxes** (`GET /pods/{pod_id}/inboxes`) - View all inboxes in a pod
+* **Threads** (`GET /pods/{pod_id}/threads`) - View all email conversations across all inboxes in the pod
+* **Drafts** (`GET /pods/{pod_id}/drafts`) - View all draft emails across all inboxes in the pod
+* **Domains** (`GET /pods/{pod_id}/domains`) - View all custom domains in the pod
+
+This gives you a unified view of all activity within a customer's workspace, making it easy to build features like:
+
+* "Show me all unread emails for Customer X" (use labels here too!)
+* "List all threads across all of Customer Y's team inboxes"
+* "Display all pending drafts for Customer Z"
+
+## Copy for Cursor / Claude
+
+Copy one of the blocks below into Cursor or Claude for complete Pods API knowledge in one shot.
+
+```python title="Python"
+"""
+AgentMail Pods — copy into Cursor/Claude. Multi-tenant isolation.
+
+API reference:
+- pods.create(client_id?) — client_id for idempotent mapping to your tenant IDs
+- pods.get(pod_id), pods.list(limit?, page_token?), pods.delete(pod_id)
+- pods.inboxes.list(pod_id, ...), pods.inboxes.create(pod_id, ...), pods.inboxes.delete(pod_id, inbox_id)
+- pods.domains.list(pod_id, ...), pods.domains.create(pod_id, ...), pods.domains.delete(pod_id, domain_id)
+- pods.threads.list(pod_id, ...), pods.drafts.list(pod_id, ...)
+
+Delete order: inboxes + domains first, then pod. Deleting inbox/domain cascades to messages/threads.
+"""
+from agentmail import AgentMail
+
+client = AgentMail(api_key="YOUR_API_KEY")
+
+pod = client.pods.create(client_id="tenant-acme-1")
+inboxes = client.pods.inboxes.list(pod.pod_id)
+inbox = client.pods.inboxes.create(pod.pod_id, username="support", display_name="Support")
+threads = client.pods.threads.list(pod.pod_id, limit=20)
+```
+
+```typescript title="TypeScript"
+/**
+ * AgentMail Pods — copy into Cursor/Claude. Multi-tenant isolation.
+ *
+ * API reference:
+ * - pods.create({ clientId? })
+ * - pods.get(podId), pods.list({ limit?, pageToken? }), pods.delete(podId)
+ * - pods.inboxes.list(podId, ...), pods.inboxes.create(podId, ...), pods.inboxes.delete(podId, inboxId)
+ * - pods.domains.list(podId, ...), pods.domains.create(podId, ...), pods.domains.delete(podId, domainId)
+ * - pods.threads.list(podId, ...), pods.drafts.list(podId, ...)
+ *
+ * Delete order: inboxes + domains first, then pod.
+ */
+import { AgentMailClient } from "agentmail";
+
+const client = new AgentMailClient({ apiKey: "YOUR_API_KEY" });
+
+async function main() {
+  const pod = await client.pods.create({ clientId: "tenant-acme-1" });
+  const inboxes = await client.pods.inboxes.list(pod.podId);
+  const inbox = await client.pods.inboxes.create(pod.podId, { username: "support", displayName: "Support" });
+  const threads = await client.pods.threads.list(pod.podId, { limit: 20 });
+}
+main();
+```
+
+## Important Considerations
+
+### Pod Deletion Constraints
+
+**Critical**: You cannot delete a pod that has resources still attached to it.
+You must delete all inboxes and domains within the pod before you can delete
+the pod itself.
+
+This is a safety mechanism to prevent accidental data loss. Here's the correct deletion sequence:
+
+```typescript
+// This will FAIL if the pod has any resources
+await client.pods.delete(podId);
+
+// Correct approach: Clean up resources first
+async function offboardCustomer(podId: string) {
+  // 1. Delete all inboxes
+  const inboxRes = await client.inboxes.list(podId);
+  for (const inbox of inboxRes.inboxes) {
+    await client.inboxes.delete(inbox.inbox_id);
+  }
+
+  // 2. Delete all domains
+  const domainRes = await client.domains.list({ podId });
+  for (const domain of domainRes.domains) {
+    await client.domains.delete(domain.domain_id);
+  }
+
+  // 3. Now you can delete the pod
+  await client.pods.delete(podId);
+}
+```
+
+When you delete an inbox or domain, all associated data (messages, threads,
+drafts) is automatically cleaned up. You don't need to manually delete
+individual threads or messages.
+
+**What's NOT Isolated to a Pod:**
+
+* Organization-level API keys (these can access any resources in any pod). Use [pod-scoped API keys](/multi-tenancy#pod-scoped-keys) to restrict access to a single pod, or [inbox-scoped API keys](/multi-tenancy#inbox-scoped-keys) to restrict access to a single inbox.
+
+## Common Patterns and Use Cases
+
+### Pattern 1: Multi-Tenant SaaS
+
+Each company using your platform gets their own pod:
+
+```typescript
+// Customer A's workspace
+Pod: "Acme Corp"
+├── Inbox: support@acme.com
+├── Inbox: sales@acme.com
+└── Domain: acme.com
+
+// Customer B's workspace
+Pod: "TechStart Inc"
+├── Inbox: hello@techstart.io
+├── Inbox: team@techstart.io
+└── Domain: techstart.io
+```
+
+### Pattern 2: Agency Client Management
+
+Each client gets their own isolated pod:
+
+```typescript
+// Client 1
+Pod: "Client - Retail Co"
+├── Inbox: info@retailco.com
+└── Domain: retailco.com
+
+// Client 2
+Pod: "Client - FinTech"
+├── Inbox: support@fintech.ai
+└── Domain: fintech.ai
+```
+
+### Pattern 3: AI Agent Platform
+
+Each AI agent gets its own pod with dedicated email infrastructure:
+
+```typescript
+// Agent 1: Customer Support Agent
+Pod: "Support-Agent"
+├── Inbox: support@mycompany.com
+├── Inbox: help@mycompany.com
+└── Inbox: tickets@mycompany.com
+
+// Agent 2: Sales Outreach Agent
+Pod: "Sales-Agent"
+├── Inbox: sales@mycompany.com
+├── Inbox: outreach@mycompany.com
+└── Inbox: leads@mycompany.com
+
+// Agent 3: Marketing Agent
+Pod: "Marketing-Agent"
+├── Inbox: newsletter@mycompany.com
+├── Inbox: campaigns@mycompany.com
+└── Inbox: events@mycompany.com
+```
+
+## FAQ
+
+#### Can inboxes communicate between pods?
+
+Yes! Inboxes in different pods can send and receive emails from each other
+just like any other email addresses. Pods only provide organizational
+isolation, not network isolation.
+
+#### Can I move an inbox from one pod to another?
+
+No, inboxes cannot be moved between pods. You will need to create a new inbox
+in the pod you want.
+
+#### How many pods can I create?
+
+There's no hard limit on the number of pods. You can create as many as you
+need for your customers.
+
+#### Do I need to use pods?
+
+Pods are optional but highly recommended for multi-tenant applications. If
+you're only managing email for your own organization, you can work directly
+with inboxes without creating pods.
+
+#### Can I set custom permissions per pod?
+
+Yes! You can create pod-scoped API keys that are restricted to a single pod, or
+inbox-scoped API keys that are restricted to a single inbox within a pod. See the
+[Multi-Tenancy guide](/multi-tenancy#scoped-api-keys) for details on provisioning scoped keys.
+
+## Next Steps
+
+* Learn about [Inboxes](/inboxes) and how to create email accounts within pods
+* Explore [Domains](/custom-domains) to set up custom email domains for your pods

@@ -1,0 +1,275 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://docs.firecrawl.dev/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# Debug Firecrawl with Ask
+
+> Debug a failed job or any Firecrawl integration issue with an agentic support API
+
+Firecrawl `/support/ask` is an AI support agent exposed as an API. Describe your issue and get back a verified diagnosis with actionable fix parameters — typically in 15–30 seconds.
+
+**Think of `/support/ask` as a senior Firecrawl engineer on-call for your agent.**
+
+<Info>
+  The Ask API is designed primarily for **AI agent callers**. If you're building agents that use Firecrawl for scraping, crawling, or data extraction, wire `/support/ask` into your error-handling flow for autonomous issue resolution.
+</Info>
+
+## Two endpoints
+
+| Endpoint                    | Auth                   | Who it's for         | What it does                                                |
+| --------------------------- | ---------------------- | -------------------- | ----------------------------------------------------------- |
+| `POST /support/ask`         | Your Firecrawl API key | Your agents and apps | Full diagnostic loop scoped to your team                    |
+| `POST /support/docs-search` | Your Firecrawl API key | Your agents and apps | Docs-grounded answers from Firecrawl's public documentation |
+
+## Quick start
+
+### Debug a failing crawl
+
+```bash theme={null}
+curl -X POST https://api.firecrawl.dev/v2/support/ask \
+  -H "Authorization: Bearer fc-YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "my crawl returned 3 pages but I expected 50"
+  }'
+```
+
+### Search the docs
+
+```bash theme={null}
+curl -X POST https://api.firecrawl.dev/v2/support/docs-search \
+  -H "Authorization: Bearer fc-YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "how do I set up webhook signature verification?"
+  }'
+```
+
+## Debug a failed job
+
+Every Firecrawl job — scrape, crawl, batch scrape, search, map, or extract — can be debugged with `/support/ask`. Describe the failure in plain language and include the job ID when you have one; the agent pulls that job's logs and your account state before answering.
+
+```bash theme={null}
+curl -X POST https://api.firecrawl.dev/v2/support/ask \
+  -H "Authorization: Bearer fc-YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "debug failed job 0f8c9a1b-4e2d-47a1-9c3f-1b2d3e4f5a6b — crawl of https://example.com failed after 12 pages",
+    "rationale": "user needs the full docs site indexed before their demo"
+  }'
+```
+
+Include as much of this as you have — each piece narrows the diagnosis:
+
+| Detail                       | Why it helps                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| Job ID                       | Lets the agent read that job's logs, status, and per-page results directly         |
+| Target URL                   | Surfaces site-specific blockers like bot protection, JS rendering, or robots rules |
+| Error message or status code | Separates rate limits and credit exhaustion from scrape-level failures             |
+| What you expected            | Distinguishes a hard failure from a job that "succeeded" with missing content      |
+| `rationale`                  | Tells the agent what the end user is after so it prioritizes the right evidence    |
+
+### What Ask checks for common failures
+
+| Symptom                                  | What the agent investigates                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Job status `failed`                      | Job logs, upstream HTTP status, proxy and retry history                                     |
+| Crawl returned fewer pages than expected | `limit`, `maxDiscoveryDepth`, `includePaths`/`excludePaths`, sitemap coverage, robots rules |
+| Empty or truncated markdown              | Client-side rendering, `waitFor` timing, required `actions`, `onlyMainContent` trimming     |
+| `401` / `402` / `429` responses          | API key validity and restrictions, remaining credits, plan rate limits                      |
+| Job stuck or timing out                  | Queue state, page-level timeouts, job concurrency for your plan                             |
+| Webhook never fired                      | Delivery attempts, endpoint responses, signature verification failures                      |
+
+Don't have a job ID? Hover a row's URL in [Activity Logs](https://www.firecrawl.dev/app/logs) and click **Copy ID**, or use the `id` returned when you started the job.
+
+### Debug from Activity Logs
+
+If you'd rather not write the call yourself, the dashboard runs the same agent for you. Open [Activity Logs](https://www.firecrawl.dev/app/logs) and look for the sparkles button in the **Actions** column of a failed row — its tooltip reads **Debug issue**. It only shows up on jobs that failed or finished with errors on child requests, so successful and in-progress jobs won't have one.
+
+Clicking it starts the diagnosis straight away; there's no prompt to write. Firecrawl sends that job's URL, endpoint, status, error message, and scrape parameters to the same agent behind `/support/ask`, which then reads the job's logs and your account state. Scraped page content is never included.
+
+The panel that opens gives you:
+
+| Element             | What it is                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| Diagnosis           | The agent's explanation of what went wrong and what to change                         |
+| Confidence badge    | High, medium, or low — how sure the agent is in the answer                            |
+| **Validated** badge | Shown when the agent tested its own suggested fix and the test passed                 |
+| Suggested fix       | The corrected parameters as JSON, with a copy button — paste them into your next call |
+| Sources             | Links to the docs pages the answer draws on                                           |
+
+If the diagnosis doesn't resolve it, **Open support ticket** at the bottom of the panel files a ticket with the agent's analysis already attached, so you don't have to re-explain the failure.
+
+<Info>
+  Dashboard debugging is capped at 30 runs per hour per team, and your team needs at least one API key — the agent runs under your own key, so it only ever sees your jobs.
+</Info>
+
+Once you have a diagnosis, apply the returned `fixParameters` and retry — see the [agent retry pattern](#agent-retry-pattern) below.
+
+## How it works
+
+When you call `/support/ask`, the AI agent:
+
+1. **Gathers evidence** — inspects your job logs, account state, credit usage, and relevant documentation in parallel
+2. **Diagnoses the issue** — reasons across all evidence to identify the root cause
+3. **Proposes a fix** — generates machine-actionable `fixParameters` you can apply directly to your next API call
+4. **Validates the fix** — when possible, tests the fix against the live Firecrawl API (e.g., retrying a scrape with adjusted parameters) and reports the result
+
+## Using Ask in your agent
+
+The key design pattern: call `/support/ask` when your Firecrawl API call fails or returns unexpected results, then use the `fixParameters` to retry.
+
+### Python example
+
+```python theme={null}
+import requests
+
+FIRECRAWL_API_KEY = "fc-YOUR_API_KEY"
+
+def diagnose_firecrawl_issue(question, rationale=None):
+    """Call the Firecrawl Ask API to debug an issue."""
+    payload = {"question": question}
+    if rationale:
+        payload["rationale"] = rationale
+
+    response = requests.post(
+        "https://api.firecrawl.dev/v2/support/ask",
+        headers={
+            "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+    )
+    return response.json()
+
+
+# Example: debug a scrape that returned empty content
+result = diagnose_firecrawl_issue(
+    question="scrape returned empty markdown for https://example.com",
+    rationale="user needs product pricing data for competitive analysis",
+)
+
+print(result["answer"])
+print(result["fixParameters"])  # e.g., {"waitFor": 5000, "actions": [...]}
+print(result["confidence"])     # "high", "medium", or "low"
+```
+
+### Node.js example
+
+```javascript theme={null}
+async function diagnoseFirecrawlIssue(question, rationale) {
+  const response = await fetch(
+    "https://api.firecrawl.dev/v2/support/ask",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ question, rationale }),
+    }
+  );
+  return response.json();
+}
+
+// Example: debug a crawl that stopped early
+const result = await diagnoseFirecrawlIssue(
+  "my crawl returned 3 pages but I expected 50",
+  "user is on their third failed crawl attempt today"
+);
+
+console.log(result.answer);
+console.log(result.fixParameters);
+```
+
+### Agent retry pattern
+
+```python theme={null}
+from firecrawl import Firecrawl
+
+client = Firecrawl(api_key="fc-YOUR_API_KEY")
+
+# Step 1: Try the scrape
+doc = client.scrape("https://example.com/pricing", formats=["markdown"])
+
+if not doc.markdown or len(doc.markdown) < 100:
+    # Step 2: Ask for help debugging
+    diagnosis = diagnose_firecrawl_issue(
+        question=f"scrape returned only {len(doc.markdown or '')} chars of markdown for https://example.com/pricing",
+    )
+
+    # Step 3: Apply fix parameters and retry
+    if diagnosis.get("fixParameters"):
+        doc = client.scrape(
+            "https://example.com/pricing",
+            formats=["markdown"],
+            **diagnosis["fixParameters"],
+        )
+```
+
+## Parameters
+
+### `/support/ask`
+
+| Parameter   | Type   | Required | Description                                                                                                 |
+| ----------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `question`  | string | Yes      | What to debug (1–8,000 characters)                                                                          |
+| `rationale` | string | No       | Recommended for AI callers. What the end user is trying to accomplish. Helps prioritize evidence gathering. |
+| `context`   | object | No       | Free-form metadata from your agent, included in the debugging prompt                                        |
+
+### `/support/docs-search`
+
+| Parameter  | Type   | Required | Description                                 |
+| ---------- | ------ | -------- | ------------------------------------------- |
+| `question` | string | Yes      | The question to answer (1–8,000 characters) |
+
+## Response
+
+### `/support/ask` response
+
+```json theme={null}
+{
+  "requestId": "req_...",
+  "answer": "<2-4 sentence prose diagnosis of the issue plus the recommended fix.>",
+  "confidence": "high",
+  "fixParameters": { "<param>": "<value>" },
+  "validation": {
+    "tested": true,
+    "result": "success",
+    "evidence": "<short summary of the validation tool call the agent ran to confirm the fix>"
+  },
+  "feedback": null,
+  "durationMs": 18432
+}
+```
+
+The actual `answer`, `fixParameters`, and `validation.evidence` are produced per request by the agent based on your specific run; the example above shows the response shape, not a real diagnosis.
+
+### `/support/docs-search` response
+
+```json theme={null}
+{
+  "requestId": "req_...",
+  "answer": "The signature is sent in the X-Firecrawl-Signature header...",
+  "evidence": [
+    { "pathOrUrl": "webhooks/security.mdx#L1-L52", "reason": "..." }
+  ],
+  "usage": { "inputTokens": 4356, "outputTokens": 688, "totalTokens": 5044 },
+  "durationMs": 11252
+}
+```
+
+## Performance
+
+| Metric  | Typical       | Maximum                   |
+| ------- | ------------- | ------------------------- |
+| Latency | 15–30 seconds | 60 seconds (hard ceiling) |
+
+## API Reference
+
+* [Ask endpoint API Reference](/api-reference/endpoint/ask)
+* [Docs Search endpoint API Reference](/api-reference/endpoint/docs-search)
+
+Have feedback or need help? Email [help@firecrawl.com](mailto:help@firecrawl.com).
+
+> Are you an AI agent that needs a Firecrawl API key? See [firecrawl.dev/agent-onboarding/SKILL.md](https://www.firecrawl.dev/agent-onboarding/SKILL.md) for automated onboarding instructions.

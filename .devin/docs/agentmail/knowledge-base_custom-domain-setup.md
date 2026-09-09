@@ -1,0 +1,94 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# How do I set up a custom domain?
+
+Custom domains let your agent send emails from your brand (e.g., `agent@yourcompany.com`) instead of the default `@agentmail.to`. This improves deliverability and builds trust with recipients.
+
+Custom domains are available on the **Developer plan and above**. The free tier uses `@agentmail.to` only. See the [pricing page](https://agentmail.to/pricing) for details.
+
+## Steps
+
+1. Add your domain in the [AgentMail Console](https://console.agentmail.to) or via the API
+2. Add the DNS records AgentMail provides to your DNS provider
+3. Wait for verification
+4. Create inboxes on your custom domain
+
+## Adding a domain
+
+You can add a domain through the [AgentMail Console](https://console.agentmail.to) (go to **Domains** and click **Add Domain**) or via the API:
+
+```typescript title="TypeScript"
+import { AgentMailClient } from "agentmail";
+
+const client = new AgentMailClient({ apiKey: "am_..." });
+
+// add your domain
+const domain = await client.domains.create("yourcompany.com");
+
+// view the DNS records you need to add
+for (const record of domain.records) {
+  console.log(`${record.type} | ${record.name} | ${record.value}`);
+}
+```
+
+The response includes all the DNS records you need to add at your DNS provider.
+
+## DNS records you need to add
+
+| Record type | Purpose                                                        |
+| ----------- | -------------------------------------------------------------- |
+| TXT (SPF)   | Authorizes AgentMail to send email on behalf of your domain    |
+| TXT (DKIM)  | Publishes the custom DKIM selector key used to sign your email |
+| TXT (DMARC) | Defines how receivers handle authentication failures           |
+| MX          | Routes incoming mail for your domain to AgentMail              |
+
+Legacy orgs should keep existing working DNS records in place. For new domain setup, add the TXT selector records shown in the AgentMail Console or API response.
+
+The MX record is only needed if you want to **receive** emails on your custom domain. If you only need to send, you can skip the MX record.
+
+For step-by-step DNS setup instructions, see our provider guides:
+[Cloudflare](/knowledge-base/dns-cloudflare), [GoDaddy](/knowledge-base/dns-godaddy), [Route 53](/knowledge-base/dns-route53), [Namecheap](/knowledge-base/dns-namecheap).
+
+## Verifying your domain
+
+After adding DNS records, verify your domain:
+
+```typescript title="TypeScript"
+await client.domains.verify(domain.domainId);
+```
+
+You can also verify from the [AgentMail Console](https://console.agentmail.to) by navigating to the Domains section and clicking **Verify Domain**.
+
+Verification status will progress through these stages:
+
+| Status        | Meaning                                                  |
+| ------------- | -------------------------------------------------------- |
+| `NOT_STARTED` | You need to click Verify Domain to start the process     |
+| `PENDING`     | DNS records still need to be added or fixed              |
+| `INVALID`     | Some records are misconfigured; double check the values  |
+| `VERIFYING`   | DNS records are correct and authorization is in progress |
+| `VERIFIED`    | Domain is ready for sending and receiving                |
+
+## Creating inboxes on your domain
+
+Once verified, you can create inboxes using your custom domain:
+
+```typescript title="TypeScript"
+const inbox = await client.inboxes.create({
+  username: "support",
+  domain: "yourcompany.com",
+  displayName: "Support Agent",
+});
+
+console.log(`Created: ${inbox.inboxId}`);
+// support@yourcompany.com
+```
+
+To create inboxes on **any subdomain** of your domain (e.g. `support@bot.yourcompany.com`) without registering each subdomain separately, [enable subdomains](/custom-domains#setting-up-subdomains) on the domain and publish the wildcard MX record it returns.
+
+## Tips
+
+* **Use a subdomain** (e.g., `mail.yourcompany.com`) if you don't want to modify your root domain's MX records or risk conflicts with existing email services
+* **Verification time** varies by DNS provider, from a few minutes (Cloudflare, Route 53) to 30 minutes or more (GoDaddy, Namecheap)
+* **One SPF record per domain:** if you already have an SPF record, merge AgentMail's `include:` into the existing record rather than creating a second one
+  For a detailed walkthrough, see the [Creating Custom Domains](/custom-domains) guide.

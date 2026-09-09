@@ -1,0 +1,127 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# SOC 2 Compliance
+
+> AgentMail's SOC 2 Type I and Type II compliance.
+
+> AgentMail has achieved **SOC 2 Type I** (July 2025) and **Type II** (Q1 2026) compliance.
+
+---
+
+## Current Status
+
+#### Type I Achieved
+
+**Completed July 2025** - Controls properly designed and in place
+
+#### Type II Achieved
+
+**Completed Q1 2026** - Operational effectiveness validated over time
+
+### Compliance Timeline
+
+| Phase                          | Period              | Status    |
+| ------------------------------ | ------------------- | --------- |
+| **Type I Preparation**         | June 2025           | Completed |
+| **Type I Assessment**          | July 2025           | Completed |
+| **Type II Observation Period** | Aug 2025 - Dec 2025 | Completed |
+| **Type II Certification**      | Q1 2026             | Completed |
+
+---
+
+## What is SOC 2?
+
+**SOC 2** is an attestation standard by **AICPA** (The American Institute of Certified Public Accountants) evaluating controls over:
+
+1. **Security** - Protection against unauthorized access, both physical and logical
+2. **Availability** - System accessibility and operational performance as committed
+3. **Processing Integrity** - System processing is complete, valid, accurate, timely, and authorized
+4. **Confidentiality** - Information designated as confidential is protected
+5. **Privacy** - Personal information is collected, used, retained, disclosed, and disposed per privacy commitments
+
+### Report Types
+
+* **Type I**: Verifies that security controls are properly **designed** at a point in time.
+* **Type II**: Validates that controls **operate effectively** over a period (typically 6–12 months).
+
+AgentMail's SOC 2 Type I and Type II reports confirm that our security infrastructure is properly designed, implemented, and operates effectively over time.
+
+---
+
+## Security Controls Implemented
+
+The following controls have been audited and verified as part of our SOC 2 Type I & Type II compliance:
+
+### Access Control
+
+* Role-based access; **least privilege** enforced
+* **MFA** (Multi-Factor Authentication) for administrative access and sensitive operations
+* Quarterly access reviews and revocation upon role change
+
+### Encryption & Key Management
+
+* **TLS 1.2+** for all service/API communications
+* Data at rest encrypted using industry-standard ciphers
+* Centralized **KMS** (Key Management Service) for key generation, rotation, and revocation
+* **Encrypted point-in-time backups** with 30-day retention
+
+See [Security Overview](https://agentmail.to/security) for more details.
+
+### Email Authentication & Anti-Abuse
+
+* **SPF, DKIM, DMARC** configured across all sending domains
+* Real-time scanning of inbound/outbound messages for malware/phishing
+* IP-based **rate limiting** and behavioral abuse detection
+
+See [Email Protocols](https://docs.agentmail.to/email-protocols) for technical details.
+
+### Monitoring & Incident Response
+
+* Centralized logging and anomaly detection with alerting
+* Documented incident response process: detect → triage → contain → eradicate → recover → post-incident review
+* Responsible disclosure channel for external security researchers
+
+### Resilience, Backup & Recovery
+
+* Daily encrypted backups with **30-day retention**
+* Regular **restore tests** to validate RTO/RPO targets
+* Multi-AZ/high-availability architecture for critical components
+
+---
+
+## SOC 2 Control Mapping
+
+| Control Area         | Implementation                                 | SOC 2 Criteria |
+| -------------------- | ---------------------------------------------- | -------------- |
+| Access Control       | RBAC, MFA, quarterly reviews                   | CC6.1–CC6.7    |
+| Encryption & KMS     | TLS 1.2+, at-rest encryption, key rotation     | CC6.8–CC6.9    |
+| Email Authentication | SPF/DKIM/DMARC, anti-abuse filters             | CC7.1–CC7.4    |
+| Threat Monitoring    | Centralized logs, alerts, malware scanning     | CC7.2–CC7.4    |
+| Backup & Recovery    | Daily backups, 30-day retention, restore tests | CC7.3          |
+| Incident Response    | Runbooks, post-mortems, disclosure program     | CC7.4–CC7.5    |
+| Workforce Security   | Security training, NDAs, background checks     | CC5.3–CC5.4    |
+
+> The above mappings reflect our audited Type I and Type II controls.
+
+---
+
+## Type II Certification
+
+AgentMail completed the **Type II observation period** (August 2025 - December 2025) and received full **SOC 2 Type II certification** in Q1 2026 from an independent CPA firm.
+
+### What Was Validated
+
+* **Continuous Operation**: Controls functioned consistently without gaps
+* **Change Management**: Security maintained through system updates and changes
+* **Evidence Collection**: Logs, tickets, training records, access reviews
+* **Incident Handling**: Real-world response to security events
+
+SOC 2 Type II certification provides the highest level of assurance that AgentMail's security controls are not only well-designed but also operate effectively over time.
+
+---
+
+## Accessing SOC 2 Reports
+
+Organizations evaluating AgentMail can [request SOC 2 documentation](mailto:security@agentmail.to).
+
+---

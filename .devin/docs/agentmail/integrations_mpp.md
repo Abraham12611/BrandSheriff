@@ -1,0 +1,91 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# MPP
+
+> AgentMail's MPP integration for machine-to-machine payments via Stripe
+
+## Getting started
+
+[MPP (Machine Payments Protocol)](https://mpp.dev) is Stripe's open protocol that enables machine-to-machine payments. By integrating MPP with AgentMail, your agents can pay for API usage directly without managing API keys or subscriptions.
+
+### Base URLs
+
+To authenticate with MPP instead of an API key, you must use the MPP-specific base URLs below. These replace the default AgentMail base URLs and route requests through the MPP payment layer.
+
+| Protocol  | URL                    |
+| --------- | ---------------------- |
+| HTTP      | `mpp.api.agentmail.to` |
+| WebSocket | `mpp.ws.agentmail.to`  |
+
+### Prerequisites
+
+* A crypto wallet with funds (EVM-compatible wallet)
+* Node.js installed
+
+### Install dependencies
+
+```bash
+npm install agentmail mppx viem
+```
+
+### Quickstart
+
+```typescript
+import { privateKeyToAccount } from "viem/accounts";
+import { Mppx, tempo } from "mppx/client";
+
+import { AgentMailClient } from "agentmail";
+
+
+// setup MPP client
+
+const PRIVATE_KEY = "0x...";
+
+const account = privateKeyToAccount(PRIVATE_KEY);
+
+export const mppx = Mppx.create({ methods: [tempo({ account })] });
+
+
+// setup AgentMail client
+
+export const client = new AgentMailClient({ mppx });
+
+
+// create inbox
+
+const inboxRes = await client.inboxes.create({
+  username: `mpp-${Date.now()}`,
+});
+console.log("Created inbox: ", inboxRes.inboxId);
+
+
+// subscribe to inbox
+
+const socket = await client.websockets.connect();
+console.log("Connected to websocket");
+
+socket.on("message", async (event) => {
+  if (event.type === "subscribed") {
+    console.log("Subscribed to", event.inboxIds);
+  } else if (event.type === "event" && event.eventType === "message.received") {
+    console.log("Received message from: ", event.message.from);
+  }
+});
+
+socket.sendSubscribe({
+  type: "subscribe",
+  inboxIds: [inboxRes.inboxId],
+});
+```
+
+## How it works
+
+When you pass an `mppx` client to `AgentMailClient`, the SDK automatically handles payment negotiation for each API request. The MPP client signs payments using your wallet, enabling your agent to pay per request seamlessly.
+
+This means your agent can use the full AgentMail API (inboxes, messages, threads, attachments) without needing a traditional API key. Payment happens per-request via Stripe's Machine Payments Protocol.
+
+## Resources
+
+* [MPP documentation](https://mpp.dev)
+* [AgentMail API reference](/api-reference)
+* [WebSockets overview](/websockets)

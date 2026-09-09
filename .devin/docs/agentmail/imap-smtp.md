@@ -1,0 +1,254 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# IMAP & SMTP
+
+> Configure IMAP and SMTP to access your AgentMail inboxes using email clients or programmatic access.
+
+AgentMail supports standard IMAP and SMTP protocols, allowing you to connect using traditional email clients or integrate with existing systems that rely on these protocols.
+
+## What are IMAP and SMTP?
+
+**IMAP (Internet Message Access Protocol)** and **SMTP (Simple Mail Transfer Protocol)** are the standard protocols that power email communication across the internet.
+
+* **IMAP** is used to **read and manage emails**. It allows email clients to sync with a mail server, keeping your messages organized across multiple devices. When you check your inbox in Outlook or Thunderbird, you're using IMAP.
+
+* **SMTP** is used to **send emails**. When you hit "Send" on an email, SMTP handles delivering that message to the recipient's mail server.
+
+### Why Use IMAP/SMTP with AgentMail?
+
+* **Email Client Integration**: Connect Outlook, Thunderbird, Apple Mail, or any IMAP/SMTP-compatible client to your AgentMail inbox
+* **Programmatic Access**: Send and receive emails using standard libraries (like Python's `imaplib` or `smtplib`) in any programming language
+* **Legacy System Integration**: Bridge AgentMail with existing systems that only support IMAP/SMTP protocols
+* **Familiar Tooling**: Use email tools you already know during development and testing
+
+## Finding Your Credentials
+
+Before configuring IMAP or SMTP, you'll need two pieces of information from the [AgentMail Console](https://console.agentmail.to):
+
+#### Get Your Inbox ID (Username)
+
+Navigate to **Dashboard → Inboxes** and find the **Inbox ID** column. Your
+inbox ID is your inbox's email address (e.g., `myinbox@agentmail.to`). This
+will be your username for IMAP authentication.
+
+#### Get Your API Key (Password)
+
+Navigate to **Dashboard → API Keys** and create or copy an API key—this will
+be your password.
+
+## IMAP Configuration
+
+Use IMAP to read emails from your AgentMail inbox.
+
+#### SSL/TLS Required
+
+SSL/TLS is **required** for all IMAP connections. Connections without SSL will
+be rejected. Make sure to enable SSL/TLS in your email client settings.
+
+| Setting      | Value                                           |
+| ------------ | ----------------------------------------------- |
+| **Host**     | `imap.agentmail.to`                             |
+| **Port**     | `993`                                           |
+| **Username** | Your inbox email (e.g., `myinbox@agentmail.to`) |
+| **Password** | Your API key                                    |
+| **SSL/TLS**  | **Required** (must be enabled)                  |
+
+#### Folder Support
+
+IMAP exposes the following folders: **INBOX**, **Sent**, **Trash**, and
+**Spam**. A **Drafts** folder is also listed for client compatibility but
+always appears empty — use the [AgentMail API](/introduction) to create
+and manage drafts.
+
+#### Real-time updates with IDLE
+
+The IMAP server supports the `IDLE` extension (RFC 2177), so modern
+clients (Thunderbird, Outlook, Apple Mail) receive new messages
+push-style without polling. Clients negotiate `IDLE` automatically when
+supported — no extra configuration needed.
+
+### Python IMAP Example
+
+```python
+import imaplib
+import os
+import email
+
+# Your credentials from AgentMail Console
+inbox_email = "myinbox@agentmail.to"  # From Dashboard → Inboxes
+api_key = os.getenv("AGENTMAIL_API_KEY")  # From Dashboard → API Keys
+
+# Connect with SSL (required)
+imap = imaplib.IMAP4_SSL("imap.agentmail.to", 993)
+
+try:
+    # Authenticate using inbox email as username
+    imap.login(inbox_email, api_key)
+
+    # Select a folder (INBOX, Sent, Trash, or Spam)
+    imap.select("INBOX")
+
+    # Search for all messages
+    status, message_ids = imap.search(None, "ALL")
+
+    if status == "OK":
+        for msg_id in message_ids[0].split():
+            # Fetch message
+            status, msg_data = imap.fetch(msg_id, "(RFC822)")
+            if status == "OK":
+                email_body = msg_data[0][1]
+                message = email.message_from_bytes(email_body)
+                print(f"Subject: {message['subject']}")
+finally:
+    imap.logout()
+```
+
+### TypeScript IMAP Example
+
+```typescript
+import Imap from "imap";
+
+// Your credentials from AgentMail Console
+const inboxEmail = "myinbox@agentmail.to"; // From Dashboard → Inboxes
+const apiKey = process.env.AGENTMAIL_API_KEY!; // From Dashboard → API Keys
+
+const imap = new Imap({
+  user: inboxEmail,
+  password: apiKey,
+  host: "imap.agentmail.to",
+  port: 993,
+  tls: true, // SSL required
+});
+
+imap.once("ready", () => {
+  imap.openBox("INBOX", false, (err, box) => {
+    if (err) throw err;
+    console.log(`${box.messages.total} messages in INBOX`);
+    imap.end();
+  });
+});
+
+imap.once("error", (err: Error) => {
+  console.error("IMAP error:", err.message);
+});
+
+imap.connect();
+```
+
+## SMTP Configuration
+
+Use SMTP to send emails from your AgentMail inbox.
+
+#### Encryption Required
+
+Encryption is **required** for all SMTP connections. Connect using **port 465
+with implicit TLS** (SSL on connect) or **port 587 with STARTTLS** (upgrade
+in-band). On port 587, attempting to authenticate before issuing `STARTTLS`
+is rejected with a `538` error.
+
+| Setting        | Value                                                 |
+| -------------- | ----------------------------------------------------- |
+| **Host**       | `smtp.agentmail.to`                                   |
+| **Port**       | `465` (implicit TLS) or `587` (STARTTLS)              |
+| **Username**   | Your inbox email (e.g., `myinbox@agentmail.to`)       |
+| **Password**   | Your API key                                          |
+| **Encryption** | Port `465`: SSL/TLS on connect · Port `587`: STARTTLS |
+
+#### From Address
+
+The "From" address in your email should match the email address of your inbox
+(e.g., `myinbox@agentmail.to`). Using a different From address may result in
+delivery failures.
+
+### SMTP Limits
+
+* **Max recipients**: 50 per email
+* **Max message size**: 10MB
+* **Session timeout**: 30 minutes
+
+### Python SMTP Example
+
+```python
+import smtplib
+import os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Your credentials from AgentMail Console
+inbox_email = "myinbox@agentmail.to"  # From Dashboard → Inboxes
+api_key = os.getenv("AGENTMAIL_API_KEY")  # From Dashboard → API Keys
+
+# Create message
+msg = MIMEMultipart()
+msg["Subject"] = "Hello from AgentMail"
+msg["From"] = inbox_email  # Use your inbox email as the From address
+msg["To"] = "recipient@example.com"
+msg.attach(MIMEText("This is a test email sent via SMTP.", "plain"))
+
+# Connect with implicit TLS on port 465 and send
+with smtplib.SMTP_SSL("smtp.agentmail.to", 465) as server:
+    server.login(inbox_email, api_key)
+    server.send_message(msg)
+    print("Email sent successfully!")
+
+# Alternatively, use STARTTLS on port 587:
+#   with smtplib.SMTP("smtp.agentmail.to", 587) as server:
+#       server.starttls()
+#       server.login(inbox_email, api_key)
+#       server.send_message(msg)
+```
+
+### TypeScript SMTP Example
+
+```typescript
+import nodemailer from "nodemailer";
+
+// Your credentials from AgentMail Console
+const inboxEmail = "myinbox@agentmail.to"; // From Dashboard → Inboxes
+const apiKey = process.env.AGENTMAIL_API_KEY!; // From Dashboard → API Keys
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.agentmail.to",
+  port: 465,
+  secure: true, // implicit TLS on port 465
+  // For STARTTLS on port 587 instead, use: port: 587, secure: false
+  auth: {
+    user: inboxEmail,
+    pass: apiKey,
+  },
+});
+
+async function sendEmail() {
+  const info = await transporter.sendMail({
+    from: inboxEmail, // Use your inbox email as the From address
+    to: "recipient@example.com",
+    subject: "Hello from AgentMail",
+    text: "This is a test email sent via SMTP.",
+  });
+  console.log("Email sent:", info.messageId);
+}
+
+sendEmail().catch(console.error);
+```
+
+## Troubleshooting
+
+| Error                                       | Cause                                  | Solution                                                                                                                                              |
+| ------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Authentication failed"                     | Invalid credentials                    | Verify your inbox email and API key from the console                                                                                                  |
+| "Connection refused" / handshake error      | Wrong encryption mode for the port     | Use SSL/TLS on connect for port `465`, or STARTTLS for port `587`                                                                                     |
+| `538` "Must issue a STARTTLS command first" | Plaintext AUTH on port `587`           | Enable STARTTLS on port `587` (or use implicit TLS on `465`) before authenticating                                                                    |
+| "Connection timeout"                        | Firewall blocking ports                | Ensure ports 993 (IMAP) and 465/587 (SMTP) are open                                                                                                   |
+| "Sender not authorized"                     | Wrong From address                     | Use your inbox's email address as the From address                                                                                                    |
+| "Folder not found"                          | Folder name typo or unsupported folder | IMAP exposes `INBOX`, `Sent`, `Trash`, and `Spam`. Folder names other than `INBOX` are case-sensitive. Use the [API](/introduction) to manage drafts. |
+
+## When to Use IMAP/SMTP vs API
+
+| Use Case                    | Recommendation |
+| --------------------------- | -------------- |
+| Email client integration    | IMAP/SMTP      |
+| Simple programmatic sending | SMTP           |
+| Full inbox management       | API            |
+| Real-time notifications     | API (Webhooks) |
+| Access to all folders       | API            |
+| Bulk operations             | API            |

@@ -1,0 +1,72 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Sim.ai
+
+> AgentMail's Sim.ai integration
+
+## Getting started
+
+[Sim.ai](https://sim.ai) is a platform for building agentic workflows. By connecting AgentMail to Sim, your workflows can create inboxes, send and receive emails, manage threads, handle drafts, and organize conversations with labels, all without writing backend code.
+
+## Use cases
+
+* **Dynamic inbox creation:** Spin up new inboxes on the fly for each agent, workflow, or customer for multi-tenant email handling.
+* **Automated email processing:** List and read incoming messages, then trigger downstream actions based on content, sender, or labels.
+* **Conversational email:** Reply to threads and forward messages to keep conversations flowing naturally within automated workflows.
+* **Draft and review workflows:** Create drafts, update them with AI-generated content, and send when approved for human-in-the-loop patterns.
+* **Email organization:** Apply labels to threads and messages to categorize, filter, and route emails through your automation pipeline.
+
+## Prerequisites
+
+1. An [AgentMail account](https://agentmail.to/) with an API key from the [AgentMail Console](https://console.agentmail.to)
+2. A [Sim.ai](https://sim.ai) account
+
+## Setup
+
+1. Open your workflow in the Sim builder.
+2. Add the **AgentMail** block from the tools panel.
+3. Paste your AgentMail API key into the configuration.
+4. Select the operation you need (for example, create inbox, send message, or list threads).
+5. Map the input fields to your workflow data and connect the block to the rest of your flow.
+
+## Available operations
+
+Once connected, Sim provides access to the following AgentMail operations:
+
+### Inbox management
+
+| Operation    | Description                                                            |
+| ------------ | ---------------------------------------------------------------------- |
+| Create inbox | Create a new inbox with an optional username, domain, and display name |
+| Get inbox    | Retrieve details for a specific inbox                                  |
+| Delete inbox | Delete an inbox                                                        |
+
+### Message operations
+
+| Operation        | Description                              |
+| ---------------- | ---------------------------------------- |
+| Send message     | Send a new email from an inbox           |
+| Get message      | Retrieve details of a specific message   |
+| Reply to message | Reply to an existing message in a thread |
+| Forward message  | Forward a message to new recipients      |
+
+### Thread management
+
+| Operation     | Description                                         |
+| ------------- | --------------------------------------------------- |
+| Get thread    | Retrieve a thread and its messages                  |
+| Delete thread | Permanently delete a thread and all of its messages |
+
+### Draft management
+
+| Operation    | Description                          |
+| ------------ | ------------------------------------ |
+| Create draft | Create a new email draft in an inbox |
+| Get draft    | Retrieve details of a specific draft |
+| Delete draft | Delete a draft                       |
+
+## Resources
+
+* [Sim.ai AgentMail tool documentation](https://docs.sim.ai/tools/agentmail)
+* [AgentMail API reference](/api-reference)
+* [Webhooks overview](/webhooks/webhooks-overview)

@@ -1,0 +1,124 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://docs.firecrawl.dev/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# Cloudflare Workers
+
+> Use Firecrawl with Cloudflare Workers to search, scrape, and interact with web data at the edge.
+
+## Prerequisites
+
+* Wrangler CLI (`npm install -g wrangler`)
+* A Firecrawl API key — [get one free](https://www.firecrawl.dev/app/api-keys)
+
+## Setup
+
+```bash theme={null}
+npm create cloudflare@latest my-scraper
+cd my-scraper
+npm install firecrawl
+```
+
+Add your API key as a secret:
+
+```bash theme={null}
+wrangler secret put FIRECRAWL_API_KEY
+```
+
+## Search the web
+
+Create a handler that searches the web and returns results with full page content.
+
+Edit `src/index.ts`:
+
+```typescript theme={null}
+import { Firecrawl } from "firecrawl";
+
+export interface Env {
+  FIRECRAWL_API_KEY: string;
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const firecrawl = new Firecrawl({ apiKey: env.FIRECRAWL_API_KEY });
+    const url = new URL(request.url);
+
+    if (request.method === "POST" && url.pathname === "/search") {
+      const { query } = (await request.json()) as { query: string };
+      const results = await firecrawl.search(query, { limit: 5 });
+      return Response.json(results);
+    }
+
+    return new Response("Not found", { status: 404 });
+  },
+};
+```
+
+## Scrape a page
+
+Add a `/scrape` route to extract clean markdown from any URL.
+
+```typescript theme={null}
+if (request.method === "POST" && url.pathname === "/scrape") {
+  const { url: targetUrl } = (await request.json()) as { url: string };
+  const result = await firecrawl.scrape(targetUrl);
+  return Response.json(result);
+}
+```
+
+## Interact with a page
+
+Add an `/interact` route to control a live browser session — click buttons, fill forms, and extract dynamic content.
+
+```typescript theme={null}
+if (request.method === "POST" && url.pathname === "/interact") {
+  const result = await firecrawl.scrape("https://www.amazon.com", {
+    formats: ["markdown"],
+  });
+  const scrapeId = result.metadata?.scrapeId;
+
+  await firecrawl.interact(scrapeId, {
+    prompt: "Search for iPhone 16 Pro Max",
+  });
+  const response = await firecrawl.interact(scrapeId, {
+    prompt: "Click on the first result and tell me the price",
+  });
+
+  await firecrawl.stopInteraction(scrapeId);
+  return Response.json({ output: response.output });
+}
+```
+
+## Deploy
+
+```bash theme={null}
+wrangler deploy
+```
+
+## Test it
+
+```bash theme={null}
+curl -X POST https://my-scraper.<your-subdomain>.workers.dev/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "firecrawl web scraping"}'
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Search docs" icon="magnifying-glass" href="/features/search">
+    Search the web and get full page content
+  </Card>
+
+  <Card title="Scrape docs" icon="file-lines" href="/features/scrape">
+    All scrape options including formats, actions, and proxies
+  </Card>
+
+  <Card title="Interact docs" icon="hand-pointer" href="/features/interact">
+    Click, fill forms, and extract dynamic content
+  </Card>
+
+  <Card title="Node SDK reference" icon="node" href="/sdks/node">
+    Full SDK reference with crawl, map, batch scrape, and more
+  </Card>
+</CardGroup>

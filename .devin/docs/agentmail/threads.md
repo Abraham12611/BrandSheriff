@@ -1,0 +1,234 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Threads
+
+> Learn how AgentMail Threads group messages into conversations and how to query them across your entire organization.
+
+## What is a Thread?
+
+A `Thread` is an API resource that represents a single conversation. It acts as a container, grouping a series of related `Messages` together in chronological order, just like a conversation thread in a traditional email client.
+
+`Threads` are created automatically. When your agent sends a `Message` that isn't a reply to a previous one, a new `Thread` is initiated. Any subsequent replies are automatically added to this same `Thread`, allowing your agent to easily maintain the context of a conversation over time.
+
+## Querying `Threads`
+
+While `Threads` are created implicitly, you can retrieve them in two powerful ways: scoped to a single `Inbox` or across your entire `Organization`.
+
+### Listing `Threads` per `Inbox`
+
+This is the standard way to retrieve all the conversations associated with a single agent or `Inbox`.
+
+```python title="Python"
+# You'll need an inbox ID to list threads from.
+inbox_id = "inbound-agent@agentmail.to"
+
+# This loads all threads within the specified Inbox
+
+inbox_threads = client.inboxes.threads.list(inbox_id=inbox_id)
+
+```
+
+```typescript title="TypeScript"
+// You'll need an inbox ID to list threads from.
+const inboxId = "inbound-agent@agentmail.to";
+
+// This loads all threads within the specified Inbox
+const inboxThreads = await client.inboxes.threads.list("inbound-agent@agentmail.to");
+
+console.log(`Found ${inboxThreads.count} threads in Inbox ${inboxId}.`);
+```
+
+```bash title="CLI"
+# list all threads within a specific inbox
+agentmail inboxes threads list \
+  --inbox-id inbound-agent@agentmail.to
+```
+
+### Listing `Threads` Across an `Organization`
+
+This is one of AgentMail's most powerful features. By omitting the `inbox_id`, you can retrieve a list of `Threads` from **every `Inbox`** in your `Organization`. This org-wide querying capability is essential for building:
+
+* **Supervisor Agents:** An agent that monitors conversations from a fleet of other agents.
+* **Analytics Dashboards:** Building something where you need visibility across all inboxes across the organization
+* **Advanced Workflows:** Systems that can route or escalate conversations between different agents with different permissions.
+
+```python
+# By not providing an inbox_id, we get all threads in the organization
+all_threads = client.threads.list()
+
+print(f"Found {all_threads.count} threads across the entire organization.")
+
+```
+
+```typescript title="TypeScript"
+// By not providing an inboxId, we get all threads in the organization
+const allThreads = await client.threads.list();
+
+console.log(`Found ${allThreads.count} threads across the entire organization.`);
+```
+
+```bash title="CLI"
+# list all threads across the entire organization
+agentmail threads list
+```
+
+### Searching `Threads`
+
+Full-text search finds `Threads` by keyword across the sender, recipients, subject, and message body, ranked by relevance. Like listing, it works per-`Inbox` or across the whole `Organization` — omit the `inbox_id` to search every `Inbox`. Spam, trash, blocked, and unauthenticated threads are excluded, and `limit` cannot exceed `100`.
+
+```python title="Python"
+# search every inbox in the organization
+results = client.threads.search(q="invoice overdue")
+
+for thread in results.threads:
+    print(thread.thread_id, thread.subject)
+    # highlights shows which fields matched, with matched terms wrapped in **
+    if thread.highlights:
+        print(thread.highlights)
+
+# or scope the search to a single inbox
+inbox_results = client.inboxes.threads.search(
+    inbox_id="inbound-agent@agentmail.to",
+    q="invoice overdue",
+)
+```
+
+```typescript title="TypeScript"
+// search every inbox in the organization
+const results = await client.threads.search({ q: "invoice overdue" });
+
+for (const thread of results.threads) {
+  console.log(thread.threadId, thread.subject);
+  // highlights shows which fields matched, with matched terms wrapped in **
+  if (thread.highlights) console.log(thread.highlights);
+}
+
+// or scope the search to a single inbox
+const inboxResults = await client.inboxes.threads.search(
+  "inbound-agent@agentmail.to",
+  { q: "invoice overdue" },
+);
+```
+
+Need an exact-field filter instead of relevance ranking? `threads.list`
+accepts `senders`, `recipients`, and `subject` substring filters and keeps the
+usual newest-first ordering.
+
+### Getting a Single `Thread`
+
+You can also retrieve a single `Thread` by its ID. This will return the `Thread` object, which typically contains a list of all its associated `Messages` and their ID's. A common workflow is listing the messages in a thread and calling the `messages.reply` method on the last one.
+
+```python
+thread_id = "thread_456def"
+
+# This loads a single thread and its messages
+
+thread = client.threads.get(
+thread_id="thread_id"
+)
+
+print(f"Retrieved thread {thread.thread_id} with {len(thread.messages)} messages.")
+
+```
+
+```typescript title="TypeScript"
+const threadId = "thread_456def";
+
+// This loads a single thread and its messages
+const thread = await client.threads.get(
+	"thread_id"
+)
+
+console.log(`Retrieved thread ${thread.thread_id} with ${thread.messages.length} messages.`);
+```
+
+```bash title="CLI"
+# get a single thread by id
+agentmail threads get \
+  --thread-id thread_456def
+```
+
+## Copy for Cursor / Claude
+
+Copy one of the blocks below into Cursor or Claude for complete Threads API knowledge in one shot.
+
+```python title="Python"
+"""
+AgentMail Threads — copy into Cursor/Claude.
+
+Setup: pip install agentmail python-dotenv. Set AGENTMAIL_API_KEY in .env.
+
+API reference:
+- inboxes.threads.list(inbox_id, limit?, page_token?, labels?, before?, after?, ascending?, senders?, recipients?, subject?)
+- inboxes.threads.search(inbox_id, q, limit?, page_token?, before?, after?) — full-text, relevance-ranked
+- inboxes.threads.get(inbox_id, thread_id)
+- inboxes.threads.get_attachment(inbox_id, thread_id, attachment_id)
+- inboxes.threads.delete(inbox_id, thread_id)
+- threads.list(limit?, page_token?, labels?, senders?, recipients?, subject?) — org-wide, all inboxes
+- threads.search(q, limit?, page_token?, before?, after?) — org-wide full-text
+- threads.get(thread_id) — org-wide
+- threads.get_attachment(thread_id, attachment_id)
+
+Errors: SDK raises on 4xx/5xx. Rate limit: 429 with Retry-After.
+"""
+import os
+from dotenv import load_dotenv
+from agentmail import AgentMail
+
+load_dotenv()
+client = AgentMail(api_key=os.getenv("AGENTMAIL_API_KEY"))
+
+inbox_id = "agent@agentmail.to"
+
+# Per-inbox threads
+inbox_threads = client.inboxes.threads.list(inbox_id=inbox_id, limit=20)
+if inbox_threads.threads:
+    thread = client.inboxes.threads.get(inbox_id, inbox_threads.threads[0].thread_id)
+
+# Org-wide threads
+all_threads = client.threads.list(limit=50)
+if all_threads.threads:
+    single = client.threads.get(all_threads.threads[0].thread_id)
+    print(f"Thread has {len(single.messages)} messages")
+```
+
+```typescript title="TypeScript"
+/**
+ * AgentMail Threads — copy into Cursor/Claude.
+ *
+ * Setup: npm install agentmail dotenv. Set AGENTMAIL_API_KEY in .env.
+ *
+ * API reference:
+ * - inboxes.threads.list(inboxId, { limit?, pageToken?, labels?, before?, after?, ascending?, senders?, recipients?, subject? })
+ * - inboxes.threads.search(inboxId, { q, limit?, pageToken?, before?, after? }) — full-text, relevance-ranked
+ * - inboxes.threads.get(inboxId, threadId)
+ * - inboxes.threads.getAttachment(inboxId, threadId, attachmentId)
+ * - inboxes.threads.delete(inboxId, threadId)
+ * - threads.list({ limit?, pageToken?, labels?, senders?, recipients?, subject? }) — org-wide
+ * - threads.search({ q, limit?, pageToken?, before?, after? }) — org-wide full-text
+ * - threads.get(threadId) — org-wide
+ * - threads.getAttachment(threadId, attachmentId)
+ *
+ * Errors: SDK throws on 4xx/5xx. Rate limit: 429 with Retry-After.
+ */
+import { AgentMailClient } from "agentmail";
+import "dotenv/config";
+
+const client = new AgentMailClient({ apiKey: process.env.AGENTMAIL_API_KEY! });
+
+async function main() {
+  const inboxId = "agent@agentmail.to";
+
+  const inboxThreads = await client.inboxes.threads.list(inboxId, { limit: 20 });
+  if (inboxThreads.threads.length > 0) {
+    const thread = await client.inboxes.threads.get(inboxId, inboxThreads.threads[0].threadId);
+  }
+
+  const allThreads = await client.threads.list({ limit: 50 });
+  if (allThreads.threads.length > 0) {
+    const single = await client.threads.get(allThreads.threads[0].threadId);
+    console.log("Thread has", single.messages.length, "messages");
+  }
+}
+main();
+```

@@ -1,0 +1,589 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Webhook Events
+
+As mentioned in the overview, webhooks allow us to create event-driven applications.
+
+AgentMail supports multiple event types that allow you to build comprehensive, event-driven workflows for your email agents.
+
+All webhook payloads follow the same basic structure:
+
+```json
+{
+  "type": "event",
+  "event_type": "event.name",
+  "event_id": "evt_123abc..."
+  // ... event-specific data object
+}
+```
+
+## Parsing events with SDKs
+
+The AgentMail SDKs export typed classes for each webhook payload shape, so you can parse raw payloads into fully typed objects.
+
+```typescript title="TypeScript"
+import { serialization } from "agentmail";
+
+async function handleWebhook(payload: Record<string, unknown>) {
+  const eventType = payload.event_type;
+  const receivedEventTypes = [
+    "message.received",
+    "message.received.spam",
+    "message.received.blocked",
+    "message.received.unauthenticated",
+  ];
+
+  if (receivedEventTypes.includes(String(eventType))) {
+    const event = await serialization.events.MessageReceivedEvent.parse(payload);
+    // access typed fields
+    console.log(event.message.subject);
+    console.log(event.thread.messageCount);
+  } else if (eventType === "message.sent") {
+    const event = await serialization.events.MessageSentEvent.parse(payload);
+    console.log(event.send.recipients);
+  } else if (eventType === "message.bounced") {
+    const event = await serialization.events.MessageBouncedEvent.parse(payload);
+    console.log(event.bounce.type);
+  } else if (eventType === "message.delivered") {
+    const event = await serialization.events.MessageDeliveredEvent.parse(payload);
+    console.log(event.delivery.recipients);
+  } else if (eventType === "message.complained") {
+    const event = await serialization.events.MessageComplainedEvent.parse(payload);
+    console.log(event.complaint.type);
+  } else if (eventType === "message.rejected") {
+    const event = await serialization.events.MessageRejectedEvent.parse(payload);
+    console.log(event.reject.reason);
+  } else if (eventType === "message.opened") {
+    const event = await serialization.events.MessageOpenedEvent.parse(payload);
+    console.log(event.open.messageId, event.open.timestamp);
+  } else if (eventType === "domain.verified") {
+    const event = await serialization.events.DomainVerifiedEvent.parse(payload);
+    console.log(event.domain.status);
+  }
+}
+```
+
+```python title="Python"
+from agentmail import (
+    MessageReceivedEvent,
+    MessageSentEvent,
+    MessageBouncedEvent,
+    MessageDeliveredEvent,
+    MessageComplainedEvent,
+    MessageRejectedEvent,
+    MessageOpenedEvent,
+    DomainVerifiedEvent,
+)
+
+def handle_webhook(payload: dict):
+    event_type = payload.get("event_type")
+    received_event_types = {
+        "message.received",
+        "message.received.spam",
+        "message.received.blocked",
+        "message.received.unauthenticated",
+    }
+
+    if event_type in received_event_types:
+        event = MessageReceivedEvent(**payload)
+        # access typed fields
+        print(event.message.subject)
+        print(event.thread.message_count)
+    elif event_type == "message.sent":
+        event = MessageSentEvent(**payload)
+        print(event.send.recipients)
+    elif event_type == "message.bounced":
+        event = MessageBouncedEvent(**payload)
+        print(event.bounce.type)
+    elif event_type == "message.delivered":
+        event = MessageDeliveredEvent(**payload)
+        print(event.delivery.recipients)
+    elif event_type == "message.complained":
+        event = MessageComplainedEvent(**payload)
+        print(event.complaint.type)
+    elif event_type == "message.opened":
+        event = MessageOpenedEvent(**payload)
+        print(event.open.message_id, event.open.timestamp)
+    elif event_type == "message.rejected":
+        event = MessageRejectedEvent(**payload)
+        print(event.reject.reason)
+    elif event_type == "domain.verified":
+        event = DomainVerifiedEvent(**payload)
+        print(event.domain.status)
+```
+
+## Copy for Cursor / Claude
+
+Copy one of the blocks below into Cursor or Claude for webhook event parsing in one shot.
+
+```python title="Python"
+"""
+AgentMail Webhook Events — copy into Cursor/Claude.
+
+Parse typed events: MessageReceivedEvent (message.received, message.received.spam, message.received.blocked, message.received.unauthenticated),
+MessageSentEvent (send), MessageBouncedEvent (bounce), MessageDeliveredEvent (delivery), MessageComplainedEvent (complaint),
+MessageRejectedEvent (reject), MessageOpenedEvent (open), DomainVerifiedEvent (domain).
+Only message.received* includes full message+thread; others have send/delivery/bounce/complaint/reject/domain.
+Note: message.received.spam and message.received.blocked require label_spam_read / label_blocked_read permissions.
+message.received.unauthenticated must be explicitly included in event_types.
+"""
+from agentmail import (
+  MessageReceivedEvent,
+  MessageSentEvent, MessageBouncedEvent,
+  MessageDeliveredEvent, MessageComplainedEvent, MessageRejectedEvent, MessageOpenedEvent, DomainVerifiedEvent,
+)
+
+def handle(payload: dict):
+  t = payload.get("event_type")
+  if t in {"message.received", "message.received.spam", "message.received.blocked", "message.received.unauthenticated"}: e = MessageReceivedEvent(**payload); print(e.message.subject, e.thread.message_count)
+  elif t == "message.sent": e = MessageSentEvent(**payload); print(e.send.recipients)
+  elif t == "message.bounced": e = MessageBouncedEvent(**payload); print(e.bounce.type)
+  elif t == "message.delivered": e = MessageDeliveredEvent(**payload)
+  elif t == "message.complained": e = MessageComplainedEvent(**payload)
+  elif t == "message.rejected": e = MessageRejectedEvent(**payload); print(e.reject.reason)
+  elif t == "message.opened": e = MessageOpenedEvent(**payload); print(e.open.message_id, e.open.timestamp)
+  elif t == "domain.verified": e = DomainVerifiedEvent(**payload); print(e.domain.status)
+```
+
+```typescript title="TypeScript"
+/**
+ * AgentMail Webhook Events — copy into Cursor/Claude.
+ *
+ * Parse with serialization.events.<EventType>.parse(payload).
+ * message.received, message.received.spam, message.received.blocked, message.received.unauthenticated → MessageReceivedEvent.
+ * Only message.received* has message+thread; others have send/delivery/bounce/complaint/reject/domain.
+ * message.received.spam and message.received.blocked require label_spam_read / label_blocked_read permissions.
+ * message.received.unauthenticated must be explicitly included in eventTypes.
+ */
+import { serialization } from "agentmail";
+
+async function handle(payload: Record<string, unknown>) {
+  const t = payload.event_type;
+  const receivedEventTypes = [
+    "message.received",
+    "message.received.spam",
+    "message.received.blocked",
+    "message.received.unauthenticated",
+  ];
+  if (receivedEventTypes.includes(String(t))) {
+    const e = await serialization.events.MessageReceivedEvent.parse(payload);
+    console.log(e.message.subject, e.thread.messageCount);
+  } else if (t === "message.sent") {
+    const e = await serialization.events.MessageSentEvent.parse(payload);
+    console.log(e.send.recipients);
+  } else if (t === "message.bounced") {
+    const e = await serialization.events.MessageBouncedEvent.parse(payload);
+    console.log(e.bounce.type);
+  } else if (t === "message.delivered") {
+    const e = await serialization.events.MessageDeliveredEvent.parse(payload);
+    console.log(e.delivery);
+  } else if (t === "message.complained") {
+    const e = await serialization.events.MessageComplainedEvent.parse(payload);
+    console.log(e.complaint);
+  } else if (t === "message.opened") {
+    const e = await serialization.events.MessageOpenedEvent.parse(payload);
+    console.log(e.open.messageId, e.open.timestamp);
+  } else if (t === "message.rejected") {
+    const e = await serialization.events.MessageRejectedEvent.parse(payload);
+    console.log(e.reject);
+  } else if (t === "domain.verified") {
+    const e = await serialization.events.DomainVerifiedEvent.parse(payload);
+    console.log(e.domain);
+  }
+}
+```
+
+## Message Events
+
+### `message.received`
+
+* **Description:** Triggered whenever a new email is successfully received and processed in one of your `Inboxes`. This is the most common trigger to kick off agent workflows.
+* **Example use-case:** Kick off a internal workflow when a customer complaint email hits the support inbox
+
+Something here to notice is `message.received` and its filtered variants are
+the only webhook events that include both the metadata on the `Thread` and the
+`Message` in the payload. Other event types send only metadata on the event.
+Let us know if you need
+metadata on other event types by emailing `support@agentmail.cc`
+
+The `text` and `preview` fields may be absent when the original email only
+contains HTML with no plain-text part. This is common with forwarded emails
+from clients like Gmail and Outlook. When handling incoming messages, always
+check for `html` as the primary content source and treat `text` as optional.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.received",
+  "event_id": "evt_123abc",
+  "message": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<abc123@agentmail.to>",
+    "labels": ["received"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "from": "Jane Doe <jane@example.com>",
+    "to": ["Support Agent <support@agentmail.to>"],
+    "subject": "Question about my account",
+    "preview": "A short preview of the email text...",
+    "text": "The full text body of the email.",
+    "html": "<html>...</html>",
+    "size": 2048,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  },
+  "thread": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "labels": ["received"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "senders": ["Jane Doe <jane@example.com>"],
+    "recipients": ["Support Agent <support@agentmail.to>"],
+    "subject": "Question about my account",
+    "preview": "A short preview of the email text...",
+    "last_message_id": "<abc123@agentmail.to>",
+    "message_count": 1,
+    "size": 2048,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  }
+}
+```
+
+### `message.received.spam`
+
+* **Description:** Triggered when a new email is received and classified as spam. The payload structure is the same as `message.received`. Messages classified as spam are not delivered as `message.received` events.
+* **Example use-case:** Route spam to a review queue or log spam patterns for analysis.
+
+This event is only delivered if the API key used to create the webhook has the `label_spam_read` permission. Without this permission, the webhook creation will be rejected with a `403 Forbidden` error.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.received.spam",
+  "event_id": "evt_spam123",
+  "message": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<spam123@example.com>",
+    "labels": ["spam"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "from": "spammer@example.com",
+    "to": ["agent@agentmail.to"],
+    "subject": "Suspicious offer",
+    "preview": "You've been selected...",
+    "text": "Full spam message body.",
+    "html": "<html>...</html>",
+    "size": 1024,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  },
+  "thread": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "labels": ["spam"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "senders": ["spammer@example.com"],
+    "recipients": ["agent@agentmail.to"],
+    "subject": "Suspicious offer",
+    "preview": "You've been selected...",
+    "last_message_id": "<spam123@example.com>",
+    "message_count": 1,
+    "size": 1024,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  }
+}
+```
+
+### `message.received.blocked`
+
+* **Description:** Triggered when a new email is received and matched a block list entry. The payload structure is the same as `message.received`. Messages that match a block list are not delivered as `message.received` events.
+* **Example use-case:** Audit blocked senders or maintain a log of blocked messages.
+
+This event is only delivered if the API key used to create the webhook has the `label_blocked_read` permission. Without this permission, the webhook creation will be rejected with a `403 Forbidden` error.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.received.blocked",
+  "event_id": "evt_blocked456",
+  "message": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<blocked456@example.com>",
+    "labels": ["blocked"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "from": "blocked-sender@example.com",
+    "to": ["agent@agentmail.to"],
+    "subject": "Blocked message",
+    "preview": "This message was blocked...",
+    "text": "Full blocked message body.",
+    "html": "<html>...</html>",
+    "size": 512,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  },
+  "thread": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "labels": ["blocked"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "senders": ["blocked-sender@example.com"],
+    "recipients": ["agent@agentmail.to"],
+    "subject": "Blocked message",
+    "preview": "This message was blocked...",
+    "last_message_id": "<blocked456@example.com>",
+    "message_count": 1,
+    "size": 512,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  }
+}
+```
+
+### `message.received.unauthenticated`
+
+* **Description:** Triggered when a new email is received without authentication headers, so AgentMail cannot verify whether it is authenticated. These messages are processed and labeled `unauthenticated` because legitimate senders may omit the headers; messages with authentication headers that explicitly fail are dropped.
+* **Example use-case:** Monitor senders whose messages are missing authentication headers so you can decide whether to trust them or ask them to improve their email setup.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.received.unauthenticated",
+  "event_id": "evt_unauth789",
+  "message": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<unauth789@example.com>",
+    "labels": ["unauthenticated"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "from": "sender@example.com",
+    "to": ["agent@agentmail.to"],
+    "subject": "Unauthenticated message",
+    "preview": "This message is missing authentication headers...",
+    "text": "Full unauthenticated message body.",
+    "html": "<html>...</html>",
+    "size": 512,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  },
+  "thread": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "labels": ["unauthenticated"],
+    "timestamp": "2023-10-27T10:00:00Z",
+    "senders": ["sender@example.com"],
+    "recipients": ["agent@agentmail.to"],
+    "subject": "Unauthenticated message",
+    "preview": "This message is missing authentication headers...",
+    "last_message_id": "<unauth789@example.com>",
+    "message_count": 1,
+    "size": 512,
+    "updated_at": "2023-10-27T10:00:00Z",
+    "created_at": "2023-10-27T10:00:00Z"
+  }
+}
+```
+
+### `message.sent`
+
+* **Description:** Triggered when a message is successfully sent from one of your `Inboxes`.
+* **Use Case:** Track outgoing messages, update your database, or trigger follow-up workflows after sending.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.sent",
+  "event_id": "evt_456def",
+  "send": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<abc123@agentmail.to>",
+    "timestamp": "2023-10-27T10:05:00Z",
+    "recipients": [
+      "recipient@example.com"
+    ]
+  }
+}
+```
+
+### `message.delivered`
+
+* **Description:** Triggered when a sent message is successfully delivered to the recipient's mail server.
+* **Use Case:** Confirm successful delivery, update message status, or trigger delivery confirmation workflows.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.delivered",
+  "event_id": "evt_789ghi",
+  "delivery": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<abc123@agentmail.to>",
+    "timestamp": "2023-10-27T10:06:00Z",
+    "recipients": [
+      "recipient@example.com"
+    ]
+  }
+}
+```
+
+#### What is the difference between \`message.sent\` and \`message.delivered?\`
+
+`message.sent` means the message has successfully left our servers and is out
+to travel the network. This typically happens before `message.delivered`
+where `message.delivered` means the receiving email server (whether it's Gmail
+or Outlook) gives us the `200 OK` saying the email has been received. What
+they do with the email after is unknown.
+
+#### Does \`message.delivered\` mean I landed in their inbox?
+
+Nope. As mentioned `message.delivered` means the receiving email server,
+whether it's Gmail or Outlook tells us "Hey AgentMail, we got your email,
+we'll take it from here!". They typically have their own proprietary
+algorithms to determine whether the email is going to end up in the inbox or
+spam, but rest assured we handle everything needed for providers like Gmail
+to deem the emails primary inbox worthy
+
+### `message.bounced`
+
+* **Description:** Triggered when a sent message fails to deliver and bounces back. Includes bounce type and sub-type information.
+* **Use Case:** Handle bounced emails, update recipient status, or trigger bounce handling workflows.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.bounced",
+  "event_id": "evt_012jkl",
+  "bounce": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<abc123@agentmail.to>",
+    "timestamp": "2023-10-27T10:07:00Z",
+    "type": "Permanent",
+    "sub_type": "General",
+    "recipients": [
+      {
+        "address": "invalid@example.com",
+        "status": "bounced"
+      }
+    ]
+  }
+}
+```
+
+### `message.complained`
+
+* **Description:** Triggered when a recipient marks your message as spam or files a complaint.
+* **Use Case:** Handle spam complaints, update sender reputation, or trigger complaint handling workflows.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.complained",
+  "event_id": "evt_345mno",
+  "complaint": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<abc123@agentmail.to>",
+    "timestamp": "2023-10-27T10:08:00Z",
+    "type": "abuse",
+    "sub_type": "spam",
+    "recipients": [
+      "complainer@example.com"
+    ]
+  }
+}
+```
+
+### `message.rejected`
+
+* **Description:** Triggered when a message is rejected before being sent, typically due to validation errors or policy violations.
+* **Use Case:** Handle rejected messages, log rejection reasons, or trigger validation workflows.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.rejected",
+  "event_id": "evt_678pqr",
+  "reject": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<abc123@agentmail.to>",
+    "timestamp": "2023-10-27T10:09:00Z",
+    "reason": "Invalid recipient address"
+  }
+}
+```
+
+If you send an email to a `bounced` address, `rejected` address, or
+`complained` address we prevent you from sending to this email address ever
+again to keep bounce rates low. Make sure to keep your account bounce rate
+under 4%, otherwise we will put your account under review.
+
+### `message.opened`
+
+* **Description:** Triggered the first time a tracked message is opened. Requires `track_opens` on the send, a custom domain with tracking enabled, and an HTML body.
+* **Use Case:** Time a follow up, mark a conversation as engaged, or measure reply rates against opens.
+
+```json
+{
+  "type": "event",
+  "event_type": "message.opened",
+  "event_id": "evt_901stu",
+  "open": {
+    "inbox_id": "inbox_456def",
+    "thread_id": "thd_789ghi",
+    "message_id": "<abc123@agentmail.to>",
+    "timestamp": "2023-10-27T10:15:00Z"
+  }
+}
+```
+
+Sent once per message, on the first open. Repeat opens do not resend it, so there are no open
+counts. One pixel is injected per message rather than per recipient, so a message with several
+recipients fires once when any of them opens it, and the event does not identify which one.
+
+Open tracking is a directional signal, not proof of reading. Mail clients that block remote images
+suppress opens, and image proxies used by some providers and security scanners can register an open
+within seconds of delivery without a person seeing the message.
+
+## Domain Events
+
+### `domain.verified`
+
+* **Description:** Triggered when a domain is successfully verified and ready to use for sending emails.
+* **Use Case:** Automatically enable domain-specific features, update domain status, or trigger post-verification workflows.
+
+```json
+{
+  "type": "event",
+  "event_type": "domain.verified",
+  "event_id": "evt_901stu",
+  "domain": {
+    "domain_id": "dom_123abc",
+    "status": "verified",
+    "feedback_enabled": true,
+    "records": [
+      // ... DNS verification records
+    ],
+    "created_at": "2023-10-27T09:00:00Z",
+    "updated_at": "2023-10-27T10:00:00Z"
+  }
+}
+```
+
+## Event Filtering
+
+When creating a webhook, you can specify which events to subscribe to. This allows you to:
+
+* Reduce webhook traffic by only subscribing to events you need
+* Create specialized webhooks for specific workflows
+
+For example, if you only need to trigger workflows on incoming messages, you can subscribe to just `message.received`. If you're building a delivery tracking system, you might subscribe to `message.sent`, `message.delivered`, and `message.bounced`.
+
+By default, spam, blocked, and unauthenticated events are **not** delivered. To receive them, you must explicitly include `message.received.spam`, `message.received.blocked`, or `message.received.unauthenticated` in the `event_types` list when creating your webhook. The API key must also have the corresponding `label_spam_read` or `label_blocked_read` permission for spam and blocked events.
+
+If you have any specific webhook notifications you would like, please ping us in the `#feature-requests` channel in the [Discord](https://discord.gg/hTYatWYWBc)

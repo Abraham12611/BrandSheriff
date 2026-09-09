@@ -1,0 +1,85 @@
+> For clean Markdown content of this page, append .md to this URL. For the complete documentation index, see https://docs.agentmail.to/llms.txt. For full content including API reference and SDK examples, see https://docs.agentmail.to/llms-full.txt.
+
+# Google ADK
+
+> AgentMail's Google Agent Development Kit (ADK) integration
+
+## Getting started
+
+[Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/) is an open-source framework for building AI agents. By connecting AgentMail to your ADK agent via the [AgentMail MCP server](/integrations/mcp), your agent can create inboxes, send and receive emails, manage threads, and handle attachments using natural language.
+
+## Use cases
+
+* **Give agents their own inboxes:** Create dedicated email addresses for your agents so they can send and receive emails independently, just like a human team member.
+* **Automate email workflows:** Let your agent handle email conversations end to end, including sending initial outreach, reading replies, and following up on threads.
+* **Manage conversations across inboxes:** List and search across threads and messages, forward emails, and retrieve attachments to keep your agent informed and responsive.
+
+## Prerequisites
+
+1. An [AgentMail account](https://agentmail.to/) with an API key from the [AgentMail Console](https://console.agentmail.to)
+2. [Google ADK](https://google.github.io/adk-docs/get-started/) installed. The Python MCP tooling ships in an extra, so install `google-adk[mcp]` rather than bare `google-adk`:
+
+   ```bash title="Python"
+   pip install "google-adk[mcp]"
+   ```
+
+   ```bash title="TypeScript"
+   npm install @google/adk
+   ```
+
+## Setup
+
+ADK supports AgentMail through the MCP tool interface. Connect to the hosted AgentMail MCP server over HTTP:
+
+```python title="Python"
+import os
+
+from google.adk.agents import Agent
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+
+AGENTMAIL_API_KEY = os.environ["AGENTMAIL_API_KEY"]
+
+root_agent = Agent(
+    model="gemini-2.5-pro",
+    name="agentmail_agent",
+    instruction="Help users manage email inboxes and send messages",
+    tools=[
+        McpToolset(
+            connection_params=StreamableHTTPConnectionParams(
+                url="https://mcp.agentmail.to/mcp",
+                headers={"x-api-key": AGENTMAIL_API_KEY},
+            ),
+        )
+    ],
+)
+```
+
+```typescript title="TypeScript"
+import { LlmAgent, MCPToolset } from "@google/adk";
+
+const AGENTMAIL_API_KEY = process.env.AGENTMAIL_API_KEY;
+
+const rootAgent = new LlmAgent({
+    model: "gemini-2.5-pro",
+    name: "agentmail_agent",
+    instruction: "Help users manage email inboxes and send messages",
+    tools: [
+        new MCPToolset({
+            type: "StreamableHTTPConnectionParams",
+            url: "https://mcp.agentmail.to/mcp",
+            transportOptions: {
+                requestInit: {
+                    headers: { "x-api-key": AGENTMAIL_API_KEY },
+                },
+            },
+        }),
+    ],
+});
+
+export { rootAgent };
+```
+
+## Available tools
+
+`McpToolset` discovers the hosted server's current tools and schemas at connection time. Refer to the [current MCP tool catalog](/integrations/mcp#available-tools) instead of copying a fixed inventory into your application.
