@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { listOrganizationIds, requireIdentity, requireOrganizationMembership } from "./lib/authz";
+import { ADMIN_ROLES, listOrganizationIds, requireIdentity, requireOrganizationMembership } from "./lib/authz";
 
 export const setMailbox = internalMutation({
   args: {
@@ -63,6 +63,7 @@ export const create = mutation({
       slug,
       ownerUserId: identity.subject,
       plan: "trial",
+      settings: { providerActionsEnabled: false },
       createdAt: now,
       updatedAt: now,
     });
@@ -107,5 +108,42 @@ export const getById = query({
   handler: async (ctx, args) => {
     await requireOrganizationMembership(ctx, args.organizationId);
     return await ctx.db.get(args.organizationId);
+  },
+});
+
+export const enableProviderActions = mutation({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const { identity, membership } = await requireOrganizationMembership(
+      ctx,
+      args.organizationId,
+      ADMIN_ROLES,
+    );
+
+    const org = await ctx.db.get(args.organizationId);
+    if (!org) throw new Error("Workspace not found");
+
+    const settings = (org.settings ?? {}) as { providerActionsEnabled?: boolean };
+    if (settings.providerActionsEnabled) {
+      return { alreadyEnabled: true };
+    }
+
+    await ctx.db.patch(args.organizationId, {
+      settings: { ...settings, providerActionsEnabled: true },
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("auditEvents", {
+      organizationId: args.organizationId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "provider_actions_enabled",
+      entityType: "organization",
+      entityId: args.organizationId,
+      timestamp: Date.now(),
+      metadataSafe: { role: membership.role },
+    });
+
+    return { alreadyEnabled: false };
   },
 });

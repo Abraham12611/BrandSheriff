@@ -15,6 +15,15 @@ async function seed(t: TestBackend) {
       slug: 'test',
       ownerUserId: 'test-owner',
       mailboxId: 'test-inbox',
+      settings: { providerActionsEnabled: false },
+    })
+    await ctx.db.insert('organizationMembers', {
+      organizationId,
+      userId: 'test-owner',
+      role: 'owner',
+      status: 'active',
+      createdAt: 1,
+      updatedAt: 1,
     })
     const brandId = await ctx.db.insert('brands', {
       organizationId,
@@ -75,8 +84,7 @@ async function seed(t: TestBackend) {
 
 type SeedIds = Awaited<ReturnType<typeof seed>>
 
-const operations: Array<{ name: string; run: (t: TestBackend, ids: SeedIds) => Promise<unknown> }> = [
-  { name: 'seed demo', run: (t) => t.mutation(api.seed.loadDemoWorkspace, { demoBaseUrl: 'https://demo.example' }) },
+const providerOperations: Array<{ name: string; run: (t: TestBackend, ids: SeedIds) => Promise<unknown> }> = [
   { name: 'crawl', run: (t, ids) => t.action(api.brandDna.crawl, { brandId: ids.brandId, url: 'https://brand.example' }) },
   { name: 'search', run: (t, ids) => t.action(api.patrol.runSearch, { runId: ids.runId, brandId: ids.brandId, queries: ['test'] }) },
   { name: 'investigate', run: (t, ids) => t.action(api.forensics.investigateDiscovery, { discoveryId: ids.discoveryId }) },
@@ -101,15 +109,23 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('Network is forbidden in safety tests'))))
 })
 
-describe.each(['anonymous', 'authenticated'] as const)('prototype containment: %s caller', (caller) => {
-  it.each(operations)('blocks $name before side effects', async ({ run }) => {
+describe.each(['anonymous', 'authenticated'] as const)('provider action containment: %s caller', (caller) => {
+  it.each(providerOperations)('blocks $name before side effects', async ({ run }) => {
     const backend = convexTest({ schema, modules })
     const ids = await seed(backend)
     const before = await snapshot(backend)
     const t = caller === 'authenticated' ? backend.withIdentity({ subject: 'test-owner' }) : backend
 
-    await expect(run(t, ids)).rejects.toMatchObject({ data: { code: 'PROTOTYPE_READ_ONLY' } })
+    await expect(run(t, ids)).rejects.toMatchObject({ data: { code: caller === 'authenticated' ? 'PROVIDER_ACTIONS_DISABLED' : 'UNAUTHENTICATED' } })
     expect(await snapshot(backend)).toEqual(before)
     expect(fetch).not.toHaveBeenCalled()
+  })
+})
+
+describe('demo data seeding containment', () => {
+  it('blocks demo workspace seeding', async () => {
+    const backend = convexTest({ schema, modules })
+    await expect(backend.withIdentity({ subject: 'test-owner' }).mutation(api.seed.loadDemoWorkspace, { demoBaseUrl: 'https://demo.example' }))
+      .rejects.toMatchObject({ data: { code: 'DEMO_SEEDING_DISABLED' } })
   })
 })

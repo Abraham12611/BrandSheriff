@@ -6,7 +6,7 @@ import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import type { Doc } from "./_generated/dataModel";
 import { requireCaseAccess } from "./lib/authz";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { assertProviderActionsEnabled } from "./providerSafety";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
@@ -40,9 +40,11 @@ async function openaiChat(messages: Array<{ role: string; content: string }>, mo
 export const recheckTarget = action({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
     const c = (await ctx.runQuery(internal.cases.getById, { caseId: args.caseId })) as Doc<"cases"> | null;
     if (!c) throw new Error("Case not found");
+
+    await assertProviderActionsEnabled(ctx, c.organizationId);
+
     const discovery = c.discoveryId
       ? ((await ctx.runQuery(internal.discoveries.getById, { discoveryId: c.discoveryId })) as Doc<"discoveries"> | null)
       : null;
@@ -77,7 +79,7 @@ Return JSON with:
 - confidence: number 0-1
 - changedElements: array of what changed, if anything
 - recommendation: next suggested step (e.g., escalate, watch, close)
-Use cautious language."`;
+Use cautious language.`;
 
       const analysis = await openaiChat([
         { role: "system", content: "You verify whether a reported infringing web page is still present, changed, or removed. You base conclusions only on the supplied page content." },

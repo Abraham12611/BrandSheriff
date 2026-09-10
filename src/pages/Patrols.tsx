@@ -5,9 +5,10 @@ import { useWorkspace } from '../lib/workspace'
 import PageHeader from '../components/PageHeader'
 import Loading from '../components/Loading'
 import EmptyState from '../components/EmptyState'
+import EnableProviderActions from '../components/EnableProviderActions'
 
 export default function Patrols() {
-  const { organization } = useWorkspace()
+  const { organization, providerActionsEnabled } = useWorkspace()
   const brands = useQuery(api.brands.list)
   const firstBrand = brands?.[0]
   const runs = useQuery(
@@ -42,10 +43,12 @@ export default function Patrols() {
     return <Loading message="Loading patrol data…" />
   }
 
-  const canRun = firstBrand !== undefined
-  const disabledReason = canRun
-    ? 'Start a patrol for the active brand'
-    : 'Add a brand first to run a patrol'
+  const canRun = firstBrand !== undefined && providerActionsEnabled
+  const disabledReason = !firstBrand
+    ? 'Add a brand first to run a patrol'
+    : !providerActionsEnabled
+    ? 'Provider actions are disabled for this workspace'
+    : 'Start a patrol for the active brand'
 
   return (
     <div className="space-y-6">
@@ -63,6 +66,8 @@ export default function Patrols() {
           </button>
         }
       />
+
+      <EnableProviderActions />
 
       {brands.length === 0 ? (
         <EmptyState

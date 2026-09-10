@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import { env } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { requireCaseAccess, requireDraftAccess } from "./lib/authz";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { assertProviderActionsEnabled } from "./providerSafety";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -37,9 +37,10 @@ async function openaiChat(messages: Array<{ role: string; content: string }>, mo
 export const generateDraft = action({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
     const c = (await ctx.runQuery(internal.cases.getById, { caseId: args.caseId })) as Doc<"cases"> | null;
     if (!c) throw new Error("Case not found");
+
+    await assertProviderActionsEnabled(ctx, c.organizationId);
 
     const discovery = c.discoveryId
       ? ((await ctx.runQuery(internal.discoveries.getById, { discoveryId: c.discoveryId })) as Doc<"discoveries"> | null)
@@ -113,9 +114,11 @@ export const approveAndSend = action({
     to: v.string(),
   },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
     const c = (await ctx.runQuery(internal.cases.getById, { caseId: args.caseId })) as Doc<"cases"> | null;
     if (!c) throw new Error("Case not found");
+
+    await assertProviderActionsEnabled(ctx, c.organizationId);
+
     const org = (await ctx.runQuery(internal.organizations.get, {
       organizationId: c.organizationId,
     })) as Doc<"organizations"> | null;

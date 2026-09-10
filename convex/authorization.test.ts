@@ -108,16 +108,16 @@ describe('Phase 1 workspace authentication and tenant isolation', () => {
     expect(typeof runId).toBe('string')
   })
 
-  it('still blocks paid/provider actions behind the prototype guard', async () => {
+  it('still blocks paid/provider actions until explicitly enabled', async () => {
     const t = convexTest({ schema, modules })
     const { asOwner, organizationId } = await createWorkspace(t, 'owner-a', 'Workspace A')
     const brandId = await seedBrand(t, organizationId, 'owner-a', 'Brand A')
     const discoveryId = await seedDiscovery(t, organizationId, brandId)
 
     await expect(asOwner.action(api.brandDna.crawl, { brandId: brandId as any, url: 'https://brand.example' }))
-      .rejects.toMatchObject({ data: { code: 'PROTOTYPE_READ_ONLY' } })
+      .rejects.toMatchObject({ data: { code: 'PROVIDER_ACTIONS_DISABLED' } })
     await expect(asOwner.action(api.forensics.investigateDiscovery, { discoveryId: discoveryId as any }))
-      .rejects.toMatchObject({ data: { code: 'PROTOTYPE_READ_ONLY' } })
+      .rejects.toMatchObject({ data: { code: 'PROVIDER_ACTIONS_DISABLED' } })
 
     expect(fetch).not.toHaveBeenCalled()
   })

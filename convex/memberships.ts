@@ -265,6 +265,19 @@ export const updateRole = mutation({
   },
 });
 
+export const getMyMembership = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx: any, args) => {
+    const identity = await requireIdentity(ctx);
+    return await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_org_user", (q: any) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject),
+      )
+      .first();
+  },
+});
+
 export const listByOrganization = query({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx: any, args) => {

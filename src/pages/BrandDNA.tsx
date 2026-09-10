@@ -1,17 +1,34 @@
-import { useQuery } from 'convex/react'
+import { useState } from 'react'
+import { useQuery, useAction } from 'convex/react'
 import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import { useWorkspace } from '../lib/workspace'
 import PageHeader from '../components/PageHeader'
 import Loading from '../components/Loading'
 import EmptyState from '../components/EmptyState'
+import EnableProviderActions from '../components/EnableProviderActions'
 
 export default function BrandDNA() {
-  const { organization } = useWorkspace()
+  const { organization, providerActionsEnabled, isAdmin } = useWorkspace()
   const brands = useQuery(api.brands.list)
+  const crawl = useAction(api.brandDna.crawl)
+  const [crawling, setCrawling] = useState<Record<string, boolean>>({})
+  const [error, setError] = useState<string | null>(null)
 
   if (brands === undefined) {
     return <Loading message="Loading brands…" />
+  }
+
+  const handleCrawl = async (brand: { _id: string; canonicalDomain: string }) => {
+    setError(null)
+    setCrawling((prev) => ({ ...prev, [brand._id]: true }))
+    try {
+      await crawl({ brandId: brand._id as any, url: brand.canonicalDomain })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Crawl failed')
+    } finally {
+      setCrawling((prev) => ({ ...prev, [brand._id]: false }))
+    }
   }
 
   return (
@@ -26,6 +43,12 @@ export default function BrandDNA() {
         }
       />
 
+      <EnableProviderActions />
+
+      {error && (
+        <div className="p-4 bg-rose-50 text-rose-700 rounded-lg text-sm">{error}</div>
+      )}
+
       <div className="app-panel overflow-hidden">
         <table className="min-w-full text-sm text-left">
           <thead className="bg-neutral-50 border-b border-neutral-200">
@@ -34,6 +57,7 @@ export default function BrandDNA() {
               <th className="px-4 py-3 font-medium text-neutral-600">Domain</th>
               <th className="px-4 py-3 font-medium text-neutral-600">Status</th>
               <th className="px-4 py-3 font-medium text-neutral-600">Last indexed</th>
+              <th className="px-4 py-3 font-medium text-neutral-600">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -55,6 +79,22 @@ export default function BrandDNA() {
                 </td>
                 <td className="px-4 py-3 text-neutral-600">
                   {brand.lastIndexedAt ? new Date(brand.lastIndexedAt).toLocaleString() : 'Never'}
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => handleCrawl(brand)}
+                    disabled={!providerActionsEnabled || crawling[brand._id]}
+                    title={
+                      providerActionsEnabled
+                        ? 'Crawl the official site and build Brand DNA'
+                        : isAdmin
+                        ? 'Enable provider actions to crawl'
+                        : 'Provider actions are disabled for this workspace'
+                    }
+                    className="btn-secondary text-xs"
+                  >
+                    {crawling[brand._id] ? 'Crawling…' : 'Crawl'}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -79,6 +119,7 @@ function StatusBadge({ status }: { status: string }) {
     crawling: 'bg-blue-50 text-blue-700',
     review: 'bg-amber-50 text-amber-700',
     active: 'bg-emerald-50 text-emerald-700',
+    failed: 'bg-rose-50 text-rose-700',
   }
   return (
     <span className={`badge ${styles[status] ?? styles.pending}`}>

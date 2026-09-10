@@ -1,11 +1,11 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { assertDataSeedingEnabled } from "./providerSafety";
 
 export const loadDemoWorkspace = mutation({
   args: { demoBaseUrl: v.string() },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
+    assertDataSeedingEnabled();
     const existing = await ctx.db.query("organizations").first();
     const organizationId = existing?._id ?? await ctx.db.insert("organizations", {
       name: "Demo workspace",

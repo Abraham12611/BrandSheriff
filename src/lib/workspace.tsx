@@ -3,10 +3,12 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Doc } from '../../convex/_generated/dataModel'
 
-
 type WorkspaceContextValue = {
   organization: Doc<'organizations'> | null
   organizations: Doc<'organizations'>[]
+  membership: Doc<'organizationMembers'> | null
+  isAdmin: boolean
+  providerActionsEnabled: boolean
   isLoading: boolean
   setOrganization: (org: Doc<'organizations'>) => void
 }
@@ -25,6 +27,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const organizations = useQuery(api.organizations.list) as Doc<'organizations'>[] | undefined
   const [activeOrg, setActiveOrg] = useState<Doc<'organizations'> | null>(null)
 
+  const membership = useQuery(
+    api.memberships.getMyMembership,
+    activeOrg ? { organizationId: activeOrg._id } : 'skip',
+  ) as Doc<'organizationMembers'> | undefined
+
   useEffect(() => {
     if (organizations === undefined) return
 
@@ -41,19 +48,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     })
   }, [organizations])
 
-  const value = useMemo<WorkspaceContextValue>(
-    () => ({
-      organization: activeOrg ?? null,
+  const value = useMemo<WorkspaceContextValue>(() => {
+    const org = activeOrg ?? null
+    const settings = (org?.settings ?? {}) as { providerActionsEnabled?: boolean }
+    const role = membership?.role
+    return {
+      organization: org,
       organizations: organizations ?? [],
-      isLoading: organizations === undefined,
+      membership: membership ?? null,
+      isAdmin: role === 'owner' || role === 'admin',
+      providerActionsEnabled: !!settings.providerActionsEnabled,
+      isLoading: organizations === undefined || (activeOrg !== null && membership === undefined),
       setOrganization: setActiveOrg,
-    }),
-    [activeOrg, organizations],
-  )
+    }
+  }, [activeOrg, membership, organizations])
 
   if (value.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-sm text-neutral-500">
+      <div className="min-h-screen flex items-center justify-center bg-canvas text-sm text-neutral-500">
         Loading workspaces…
       </div>
     )

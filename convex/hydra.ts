@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import { requireCaseAccess } from "./lib/authz";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { assertProviderActionsEnabled } from "./providerSafety";
 import type { Doc } from "./_generated/dataModel";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
@@ -31,9 +31,11 @@ export const startWatch = mutation({
 export const runWatch = action({
   args: { watchId: v.id("hydraWatches") },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
     const watch = (await ctx.runQuery(internal.hydra.getById, { watchId: args.watchId })) as Doc<"hydraWatches"> | null;
     if (!watch) throw new Error("Watch not found");
+
+    await assertProviderActionsEnabled(ctx, watch.organizationId);
+
     const brand = (await ctx.runQuery(internal.brands.get, { brandId: watch.brandId })) as Doc<"brands"> | null;
     if (!brand) throw new Error("Brand not found");
 

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { assertProviderActionsEnabled } from "./providerSafety";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 
@@ -12,9 +12,10 @@ export const crawl = action({
     url: v.string(),
   },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
     const brand = await ctx.runQuery(internal.brands.get, { brandId: args.brandId });
     if (!brand) throw new Error("Brand not found");
+
+    await assertProviderActionsEnabled(ctx, brand.organizationId);
 
     await ctx.runMutation(internal.brands.updateStatus, {
       brandId: args.brandId,

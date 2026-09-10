@@ -4,7 +4,7 @@ import { env } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import type { Doc } from "./_generated/dataModel";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { assertProviderActionsEnabled } from "./providerSafety";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 
@@ -39,11 +39,12 @@ async function openaiChat(messages: Array<{ role: string; content: string }>, mo
 export const investigateDiscovery = action({
   args: { discoveryId: v.id("discoveries") },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
     const discovery = (await ctx.runQuery(internal.discoveries.getById, {
       discoveryId: args.discoveryId,
     })) as Doc<"discoveries"> | null;
     if (!discovery) throw new Error("Discovery not found");
+
+    await assertProviderActionsEnabled(ctx, discovery.organizationId);
 
     const brand = (await ctx.runQuery(internal.brands.get, { brandId: discovery.brandId })) as Doc<"brands"> | null;
     if (!brand) throw new Error("Brand not found");

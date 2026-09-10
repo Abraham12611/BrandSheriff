@@ -9,6 +9,7 @@
  */
 
 import type * as approvals from "../approvals.js";
+import type * as authzActions from "../authzActions.js";
 import type * as brandAssets from "../brandAssets.js";
 import type * as brandDna from "../brandDna.js";
 import type * as brands from "../brands.js";
@@ -29,6 +30,7 @@ import type * as organizations from "../organizations.js";
 import type * as patrol from "../patrol.js";
 import type * as patrolRuns from "../patrolRuns.js";
 import type * as prototypeSafety from "../prototypeSafety.js";
+import type * as providerSafety from "../providerSafety.js";
 import type * as rechecks from "../rechecks.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
@@ -42,6 +44,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   approvals: typeof approvals;
+  authzActions: typeof authzActions;
   brandAssets: typeof brandAssets;
   brandDna: typeof brandDna;
   brands: typeof brands;
@@ -62,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   patrol: typeof patrol;
   patrolRuns: typeof patrolRuns;
   prototypeSafety: typeof prototypeSafety;
+  providerSafety: typeof providerSafety;
   rechecks: typeof rechecks;
   seed: typeof seed;
   users: typeof users;
