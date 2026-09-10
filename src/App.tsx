@@ -1,6 +1,7 @@
-import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import AppShell from './components/AppShell'
 import AuthGate from './components/AuthGate'
+import WorkspaceRequired from './components/WorkspaceRequired'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
 import BrandDNA from './pages/BrandDNA'
@@ -9,26 +10,60 @@ import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
 import { WorkspaceProvider } from './lib/workspace'
 
-function App() {
+export function AppRoutes() {
   return (
-    <HashRouter>
+    <WorkspaceProvider>
+      <AppShell>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route
+            path="/brand"
+            element={
+              <WorkspaceRequired>
+                <BrandDNA />
+              </WorkspaceRequired>
+            }
+          />
+          <Route
+            path="/patrols"
+            element={
+              <WorkspaceRequired>
+                <Patrols />
+              </WorkspaceRequired>
+            }
+          />
+          <Route
+            path="/cases"
+            element={
+              <WorkspaceRequired>
+                <Cases />
+              </WorkspaceRequired>
+            }
+          />
+          <Route
+            path="/cases/:id"
+            element={
+              <WorkspaceRequired>
+                <CaseDetail />
+              </WorkspaceRequired>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AppShell>
+    </WorkspaceProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
       <AuthGate>
-        <WorkspaceProvider>
-          <AppShell>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/brand" element={<BrandDNA />} />
-              <Route path="/patrols" element={<Patrols />} />
-              <Route path="/cases" element={<Cases />} />
-              <Route path="/cases/:id" element={<CaseDetail />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppShell>
-        </WorkspaceProvider>
+        <AppRoutes />
       </AuthGate>
-    </HashRouter>
+    </BrowserRouter>
   )
 }
 
@@ -48,5 +83,3 @@ function NotFound() {
     </div>
   )
 }
-
-export default App
