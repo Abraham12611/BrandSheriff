@@ -1,19 +1,28 @@
 import { v } from "convex/values";
 import { query, internalQuery, mutation, internalMutation } from "./_generated/server";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { listOrganizationIds, requireCaseAccess, requireDiscoveryAccess } from "./lib/authz";
 
 export const listByState = query({
   args: { state: v.string() },
   handler: async (ctx, args) => {
-    const all = await ctx.db.query("cases").collect();
-    return all.filter((c) => c.state === args.state);
+    const { organizationIds } = await listOrganizationIds(ctx);
+    const cases: any[] = [];
+    for (const orgId of organizationIds) {
+      const orgCases = await ctx.db
+        .query("cases")
+        .withIndex("by_org_state", (q) => q.eq("organizationId", orgId).eq("state", args.state))
+        .collect();
+      cases.push(...orgCases);
+    }
+    return cases;
   },
 });
 
 export const get = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
-    return await ctx.db.get("cases", args.caseId);
+    const { case: c } = await requireCaseAccess(ctx, args.caseId);
+    return c;
   },
 });
 
@@ -32,9 +41,7 @@ export const createFromDiscovery = mutation({
     summary: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
-    const discovery = await ctx.db.get("discoveries", args.discoveryId);
-    if (!discovery) throw new Error("Discovery not found");
+    const { discovery } = await requireDiscoveryAccess(ctx, args.discoveryId);
 
     const count = await ctx.db.query("cases").collect();
     const caseNumber = `BS-${1000 + count.length}`;

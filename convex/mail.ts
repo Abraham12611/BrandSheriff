@@ -3,6 +3,7 @@ import { internalMutation, query, action } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { AgentMail, vOutboundId } from "@agentmail/convex";
 import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { requireIdentity } from "./lib/authz";
 
 const agentmail = new AgentMail(components.agentmail);
 
@@ -42,6 +43,18 @@ export const sendFromCase = internalMutation({
 export const sendStatus = query({
   args: { outboundId: vOutboundId },
   handler: async (ctx, args) => {
+    await requireIdentity(ctx);
+    const draft = await ctx.db
+      .query("draftNotices")
+      .withIndex("by_outbound", (q) => q.eq("outboundId", args.outboundId as string))
+      .first();
+    if (!draft) {
+      throw new Error("Not found or insufficient permissions.");
+    }
+    const c = await ctx.db.get("cases", draft.caseId);
+    if (!c) {
+      throw new Error("Case not found.");
+    }
     return await agentmail.status(ctx, args.outboundId);
   },
 });

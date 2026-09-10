@@ -3,6 +3,7 @@ import { action, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { env } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { requireCaseAccess, requireDraftAccess } from "./lib/authz";
 import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
@@ -81,6 +82,7 @@ Use cautious, non-legal language and a professional tone.`;
 export const latestDraft = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
+    await requireCaseAccess(ctx, args.caseId);
     const all = await ctx.db
       .query("draftNotices")
       .withIndex("by_case", (q) => q.eq("caseId", args.caseId))
@@ -95,12 +97,11 @@ export const updateDraft = mutation({
     body: v.string(),
   },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
-    const draft = await ctx.db.get("draftNotices", args.draftId);
-    if (!draft) throw new Error("Draft not found");
+    await requireDraftAccess(ctx, args.draftId);
     await ctx.db.patch(args.draftId, {
       body: args.body,
       status: "draft_edited",
+      updatedAt: Date.now(),
     });
   },
 });

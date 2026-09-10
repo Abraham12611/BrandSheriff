@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
+import { requireCaseAccess, requireDiscoveryAccess } from "./lib/authz";
 
 export const createFromInvestigation = internalMutation({
   args: {
@@ -27,6 +28,7 @@ export const createFromInvestigation = internalMutation({
 export const listByDiscovery = query({
   args: { discoveryId: v.id("discoveries") },
   handler: async (ctx, args) => {
+    await requireDiscoveryAccess(ctx, args.discoveryId);
     return await ctx.db
       .query("evidenceItems")
       .withIndex("by_discovery", (q) => q.eq("discoveryId", args.discoveryId))
@@ -37,6 +39,7 @@ export const listByDiscovery = query({
 export const listByCase = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
+    await requireCaseAccess(ctx, args.caseId);
     return await ctx.db
       .query("evidenceItems")
       .withIndex("by_case", (q) => q.eq("caseId", args.caseId))

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { listOrganizationIds, requireIdentity, requireOrganizationMembership } from "./lib/authz";
 
 export const setMailbox = internalMutation({
   args: {
@@ -7,10 +8,11 @@ export const setMailbox = internalMutation({
     mailboxId: v.string(),
     mailboxAddress: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args) => {
     await ctx.db.patch(args.organizationId, {
       mailboxId: args.mailboxId,
       mailboxAddress: args.mailboxAddress,
+      updatedAt: Date.now(),
     });
   },
 });
@@ -22,9 +24,88 @@ export const get = internalQuery({
   },
 });
 
+export const create = mutation({
+  args: {
+    name: v.string(),
+    slug: v.optional(v.string()),
+  },
+  handler: async (ctx: any, args) => {
+    const identity = await requireIdentity(ctx);
+
+    const now = Date.now();
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", identity.subject))
+      .first();
+    if (existingUser) {
+      await ctx.db.patch(existingUser._id, {
+        email: identity.email,
+        name: identity.name,
+        imageUrl: identity.pictureUrl,
+        lastSeenAt: now,
+      });
+    } else {
+      await ctx.db.insert("users", {
+        clerkId: identity.subject,
+        email: identity.email,
+        name: identity.name,
+        imageUrl: identity.pictureUrl,
+        lastSeenAt: now,
+        createdAt: now,
+      });
+    }
+
+    const slug =
+      args.slug ??
+      (args.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "workspace");
+    const organizationId = await ctx.db.insert("organizations", {
+      name: args.name,
+      slug,
+      ownerUserId: identity.subject,
+      plan: "trial",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("organizationMembers", {
+      organizationId,
+      userId: identity.subject,
+      role: "owner",
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("auditEvents", {
+      organizationId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "created",
+      entityType: "organization",
+      entityId: organizationId,
+      timestamp: now,
+      metadataSafe: { name: args.name },
+    });
+
+    return organizationId;
+  },
+});
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("organizations").collect();
+    const { organizationIds } = await listOrganizationIds(ctx);
+    const orgs = await Promise.all(
+      [...organizationIds].map((id) => ctx.db.get("organizations", id as any)),
+    );
+    return orgs.filter((org) => org !== null);
+  },
+});
+
+export const getById = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    await requireOrganizationMembership(ctx, args.organizationId);
+    return await ctx.db.get(args.organizationId);
   },
 });

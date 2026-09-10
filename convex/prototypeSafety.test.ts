@@ -76,12 +76,7 @@ async function seed(t: TestBackend) {
 type SeedIds = Awaited<ReturnType<typeof seed>>
 
 const operations: Array<{ name: string; run: (t: TestBackend, ids: SeedIds) => Promise<unknown> }> = [
-  { name: 'create brand', run: (t) => t.mutation(api.brands.create, { name: 'Another brand', canonicalDomain: 'https://brand.example' }) },
   { name: 'seed demo', run: (t) => t.mutation(api.seed.loadDemoWorkspace, { demoBaseUrl: 'https://demo.example' }) },
-  { name: 'start patrol', run: (t, ids) => t.mutation(api.patrolRuns.start, { brandId: ids.brandId, type: 'brand_name' }) },
-  { name: 'create case', run: (t, ids) => t.mutation(api.cases.createFromDiscovery, { discoveryId: ids.discoveryId, title: 'Another case' }) },
-  { name: 'edit draft', run: (t, ids) => t.mutation(api.enforcement.updateDraft, { draftId: ids.draftId, body: 'Changed body' }) },
-  { name: 'start watch', run: (t, ids) => t.mutation(api.hydra.startWatch, { caseId: ids.caseId, brandId: ids.brandId, fingerprint: {} }) },
   { name: 'crawl', run: (t, ids) => t.action(api.brandDna.crawl, { brandId: ids.brandId, url: 'https://brand.example' }) },
   { name: 'search', run: (t, ids) => t.action(api.patrol.runSearch, { runId: ids.runId, brandId: ids.brandId, queries: ['test'] }) },
   { name: 'investigate', run: (t, ids) => t.action(api.forensics.investigateDiscovery, { discoveryId: ids.discoveryId }) },

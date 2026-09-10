@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
+import { requireCaseAccess } from "./lib/authz";
 
 export const create = internalMutation({
   args: {
@@ -30,6 +31,7 @@ export const create = internalMutation({
 export const latest = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
+    await requireCaseAccess(ctx, args.caseId);
     const all = await ctx.db
       .query("draftNotices")
       .withIndex("by_case", (q) => q.eq("caseId", args.caseId))

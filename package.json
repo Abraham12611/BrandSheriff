@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@agentmail/convex": "^0.1.0",
+    "@clerk/react": "6.15.2",
     "@convex-dev/agent": "^0.7.2",
     "@convex-dev/static-hosting": "^0.2.1",
     "@firecrawl/firecrawl-convex": "^0.1.1",

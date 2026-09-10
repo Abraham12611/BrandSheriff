@@ -1,18 +1,30 @@
 import { v } from "convex/values";
 import { query, internalQuery, internalMutation } from "./_generated/server";
+import { listOrganizationIds, requireBrandAccess, requireDiscoveryAccess } from "./lib/authz";
 
 export const listByStatus = query({
   args: { status: v.string() },
   handler: async (ctx, args) => {
-    const all = await ctx.db.query("discoveries").collect();
-    return all.filter((d) => d.status === args.status);
+    const { organizationIds } = await listOrganizationIds(ctx);
+    const discoveries: any[] = [];
+    for (const orgId of organizationIds) {
+      const orgDiscoveries = await ctx.db
+        .query("discoveries")
+        .withIndex("by_org_status", (q) =>
+          q.eq("organizationId", orgId).eq("status", args.status),
+        )
+        .collect();
+      discoveries.push(...orgDiscoveries);
+    }
+    return discoveries;
   },
 });
 
 export const get = query({
   args: { discoveryId: v.id("discoveries") },
   handler: async (ctx, args) => {
-    return await ctx.db.get("discoveries", args.discoveryId);
+    const { discovery } = await requireDiscoveryAccess(ctx, args.discoveryId);
+    return discovery;
   },
 });
 
@@ -22,10 +34,14 @@ export const listByBrandStatus = query({
     status: v.string(),
   },
   handler: async (ctx, args) => {
-    const all = await ctx.db.query("discoveries").collect();
-    return all
-      .filter((d) => d.brandId === args.brandId && d.status === args.status)
-      .sort((a, b) => b._creationTime - a._creationTime);
+    await requireBrandAccess(ctx, args.brandId);
+    const all = await ctx.db
+      .query("discoveries")
+      .withIndex("by_brand_status", (q) =>
+        q.eq("brandId", args.brandId).eq("status", args.status),
+      )
+      .collect();
+    return all.sort((a, b) => b._creationTime - a._creationTime);
   },
 });
 

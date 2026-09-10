@@ -5,6 +5,7 @@ import { env } from "./_generated/server";
 import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import type { Doc } from "./_generated/dataModel";
+import { requireCaseAccess } from "./lib/authz";
 import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
@@ -115,6 +116,7 @@ Use cautious language."`;
 export const list = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
+    await requireCaseAccess(ctx, args.caseId);
     return await ctx.db
       .query("rechecks")
       .withIndex("by_case", (q) => q.eq("caseId", args.caseId))

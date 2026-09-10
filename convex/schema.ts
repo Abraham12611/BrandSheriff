@@ -11,16 +11,60 @@ export default defineSchema({
     mailboxId: v.optional(v.string()),
     mailboxAddress: v.optional(v.string()),
     settings: v.optional(v.any()),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   })
     .index("by_slug", ["slug"])
     .index("by_owner", ["ownerUserId"]),
+
+  users: defineTable({
+    clerkId: v.string(),
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    lastSeenAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_email", ["email"]),
 
   organizationMembers: defineTable({
     organizationId: v.id("organizations"),
     userId: v.string(),
     role: v.string(),
     status: v.string(),
-  }).index("by_org_user", ["organizationId", "userId"]),
+    invitedBy: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_org_user", ["organizationId", "userId"])
+    .index("by_user", ["userId"])
+    .index("by_org", ["organizationId"]),
+
+  invitations: defineTable({
+    organizationId: v.id("organizations"),
+    email: v.string(),
+    role: v.string(),
+    token: v.string(),
+    status: v.string(),
+    invitedBy: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_org", ["organizationId"])
+    .index("by_email", ["email"])
+    .index("by_token", ["token"]),
+
+  domainVerifications: defineTable({
+    organizationId: v.id("organizations"),
+    domain: v.string(),
+    status: v.string(),
+    token: v.optional(v.string()),
+    verifiedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_org", ["organizationId"])
+    .index("by_domain", ["domain"]),
 
   brands: defineTable({
     organizationId: v.id("organizations"),
@@ -132,7 +176,9 @@ export default defineSchema({
     outboundId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_case", ["caseId"]),
+  })
+    .index("by_case", ["caseId"])
+    .index("by_outbound", ["outboundId"]),
 
   approvals: defineTable({
     organizationId: v.id("organizations"),

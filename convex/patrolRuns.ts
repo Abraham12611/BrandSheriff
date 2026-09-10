@@ -1,14 +1,16 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { requireBrandAccess } from "./lib/authz";
 
 export const listByBrand = query({
   args: { brandId: v.id("brands") },
   handler: async (ctx, args) => {
-    const all = await ctx.db.query("patrolRuns").collect();
-    return all
-      .filter((r) => r.brandId === args.brandId)
-      .sort((a, b) => b.startedAt - a.startedAt);
+    await requireBrandAccess(ctx, args.brandId);
+    const all = await ctx.db
+      .query("patrolRuns")
+      .withIndex("by_brand_status", (q) => q.eq("brandId", args.brandId))
+      .collect();
+    return all.sort((a, b) => b.startedAt - a.startedAt);
   },
 });
 
@@ -18,9 +20,7 @@ export const start = mutation({
     type: v.string(),
   },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
-    const brand = await ctx.db.get("brands", args.brandId);
-    if (!brand) throw new Error("Brand not found");
+    const { brand } = await requireBrandAccess(ctx, args.brandId);
 
     const patrolId = await ctx.db.insert("patrols", {
       organizationId: brand.organizationId,

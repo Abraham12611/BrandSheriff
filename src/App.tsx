@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import AppShell from './components/AppShell'
+import AuthGate from './components/AuthGate'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
 import BrandDNA from './pages/BrandDNA'
@@ -10,18 +11,20 @@ import CaseDetail from './pages/CaseDetail'
 function App() {
   return (
     <HashRouter>
-      <AppShell>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/brand" element={<BrandDNA />} />
-          <Route path="/patrols" element={<Patrols />} />
-          <Route path="/cases" element={<Cases />} />
-          <Route path="/cases/:id" element={<CaseDetail />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </AppShell>
+      <AuthGate>
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/brand" element={<BrandDNA />} />
+            <Route path="/patrols" element={<Patrols />} />
+            <Route path="/cases" element={<Cases />} />
+            <Route path="/cases/:id" element={<CaseDetail />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AppShell>
+      </AuthGate>
     </HashRouter>
   )
 }

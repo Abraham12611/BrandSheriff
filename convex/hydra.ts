@@ -3,6 +3,7 @@ import { action, mutation, query, internalQuery, internalMutation } from "./_gen
 import { internal } from "./_generated/api";
 import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
+import { requireCaseAccess } from "./lib/authz";
 import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 import type { Doc } from "./_generated/dataModel";
 
@@ -11,9 +12,10 @@ const firecrawl = new FirecrawlClient(components.firecrawl);
 export const startWatch = mutation({
   args: { caseId: v.id("cases"), brandId: v.id("brands"), fingerprint: v.optional(v.any()) },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
-    const c = await ctx.db.get("cases", args.caseId);
-    if (!c) throw new Error("Case not found");
+    const { case: c } = await requireCaseAccess(ctx, args.caseId);
+    if (c.brandId !== args.brandId) {
+      throw new Error("Brand does not match case brand.");
+    }
     await ctx.db.insert("hydraWatches", {
       organizationId: c.organizationId,
       brandId: args.brandId,
@@ -68,6 +70,7 @@ export const runWatch = action({
 export const list = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
+    await requireCaseAccess(ctx, args.caseId);
     return await ctx.db
       .query("hydraWatches")
       .withIndex("by_case", (q) => q.eq("caseId", args.caseId))

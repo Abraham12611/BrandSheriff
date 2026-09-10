@@ -1,37 +1,34 @@
 import { v } from "convex/values";
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
-import { assertPrototypeWriteEnabled } from "./prototypeSafety";
+import { listOrganizationIds, requireOrganizationMembership } from "./lib/authz";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("brands").collect();
+    const { organizationIds } = await listOrganizationIds(ctx);
+    const brands: any[] = [];
+    for (const orgId of organizationIds) {
+      const orgBrands = await ctx.db
+        .query("brands")
+        .withIndex("by_org", (q) => q.eq("organizationId", orgId))
+        .collect();
+      brands.push(...orgBrands);
+    }
+    return brands;
   },
 });
 
 export const create = mutation({
   args: {
+    organizationId: v.id("organizations"),
     name: v.string(),
     canonicalDomain: v.string(),
   },
   handler: async (ctx, args) => {
-    assertPrototypeWriteEnabled();
-    const existingOrg = await ctx.db.query("organizations").first();
-    let organizationId;
-    if (existingOrg) {
-      organizationId = existingOrg._id;
-    } else {
-      organizationId = await ctx.db.insert("organizations", {
-        name: "Default workspace",
-        slug: "default",
-        ownerUserId: "demo-user",
-        plan: "demo",
-        settings: {},
-      });
-    }
+    const { identity } = await requireOrganizationMembership(ctx, args.organizationId);
 
     const brandId = await ctx.db.insert("brands", {
-      organizationId,
+      organizationId: args.organizationId,
       name: args.name,
       canonicalDomain: args.canonicalDomain,
       status: "active",
@@ -40,10 +37,10 @@ export const create = mutation({
     });
 
     await ctx.db.insert("auditEvents", {
-      organizationId,
+      organizationId: args.organizationId,
       brandId,
       actorType: "user",
-      actorId: "demo-user",
+      actorId: identity.subject,
       eventType: "created",
       entityType: "brand",
       entityId: brandId,
