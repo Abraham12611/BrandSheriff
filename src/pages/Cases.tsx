@@ -1,14 +1,27 @@
 import { useQuery } from 'convex/react'
 import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
+import { useWorkspace } from '../lib/workspace'
+import PageHeader from '../components/PageHeader'
+import Loading from '../components/Loading'
+import EmptyState from '../components/EmptyState'
 
 export default function Cases() {
+  const { organization } = useWorkspace()
   const cases = useQuery(api.cases.listByState, { state: 'active' })
+
+  if (cases === undefined) {
+    return <Loading message="Loading cases…" />
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Cases</h1>
-      <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+      <PageHeader
+        title="Cases"
+        subtitle={`Active enforcement cases for ${organization?.name ?? 'this workspace'}`}
+      />
+
+      <div className="app-panel overflow-hidden">
         <table className="min-w-full text-sm text-left">
           <thead className="bg-neutral-50 border-b border-neutral-200">
             <tr>
@@ -19,10 +32,12 @@ export default function Cases() {
             </tr>
           </thead>
           <tbody>
-            {cases?.map((c) => (
+            {cases.map((c) => (
               <tr key={c._id} className="border-b border-neutral-100 last:border-0">
                 <td className="px-4 py-3 font-medium">
-                  <Link to={`/cases/${c._id}`} className="hover:underline">{c.title}</Link>
+                  <Link to={`/cases/${c._id}`} className="text-violet-600 hover:underline">
+                    {c.title}
+                  </Link>
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={c.state} />
@@ -31,15 +46,14 @@ export default function Cases() {
                 <td className="px-4 py-3 text-neutral-600">{new Date(c._creationTime).toLocaleDateString()}</td>
               </tr>
             ))}
-            {cases?.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
-                  No active cases. Create one from a discovery.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+        {cases.length === 0 && (
+          <EmptyState
+            title="No active cases"
+            description="Cases are created from discoveries on the Threat Radar. Run a patrol, then create a case from any finding."
+          />
+        )}
       </div>
     </div>
   )
@@ -53,7 +67,7 @@ function StatusBadge({ status }: { status: string }) {
     resolved: 'bg-emerald-50 text-emerald-700',
   }
   return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] ?? 'bg-neutral-100 text-neutral-700'}`}>
+    <span className={`badge ${styles[status] ?? 'bg-neutral-100 text-neutral-700'}`}>
       {status}
     </span>
   )

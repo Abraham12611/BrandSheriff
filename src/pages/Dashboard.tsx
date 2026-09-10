@@ -2,9 +2,11 @@ import { useQuery } from 'convex/react'
 import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import { useWorkspace } from '../lib/workspace'
+import PageHeader from '../components/PageHeader'
+import Loading from '../components/Loading'
 
 export default function Dashboard() {
-  const { organization, isLoading } = useWorkspace()
+  const { organization, isLoading: workspaceLoading } = useWorkspace()
   const brands = useQuery(api.brands.list)
   const firstBrand = brands?.[0]
   const discoveries = useQuery(api.discoveries.listByStatus, { status: 'needs_review' })
@@ -15,24 +17,20 @@ export default function Dashboard() {
     firstBrand ? { brandId: firstBrand._id } : 'skip',
   )
 
-  if (isLoading) {
-    return (
-      <div className="min-h-[50vh] flex items-center justify-center text-sm text-neutral-500">
-        Loading workspace…
-      </div>
-    )
+  if (workspaceLoading) {
+    return <Loading message="Loading workspace…" />
   }
 
   if (!organization) {
     return (
-      <div className="max-w-xl mx-auto bg-white rounded-lg border border-neutral-200 p-8 text-center">
+      <div className="max-w-xl mx-auto bg-white rounded-xl border border-neutral-200 p-8 text-center">
         <h1 className="text-2xl font-bold">Create your workspace</h1>
         <p className="text-neutral-600 mt-2">
           Before you can monitor brands and cases, you need a BrandSheriff workspace.
         </p>
         <Link
           to="/onboarding"
-          className="inline-block mt-6 px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800"
+          className="inline-flex mt-6 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors"
         >
           Set up workspace
         </Link>
@@ -42,10 +40,36 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Command Center</h1>
-        <p className="text-neutral-600 mt-1">Workspace: {organization.name}</p>
-      </div>
+      <PageHeader
+        title="Command Center"
+        subtitle={`Workspace: ${organization.name}`}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/onboarding"
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                (brands?.length ?? 0) === 0
+                  ? 'bg-violet-600 text-white hover:bg-violet-700'
+                  : 'bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
+              }`}
+            >
+              Onboard a brand
+            </Link>
+            <Link
+              to="/patrols"
+              className="btn-secondary"
+            >
+              Run patrol
+            </Link>
+            <Link
+              to="/cases"
+              className="btn-secondary"
+            >
+              View cases
+            </Link>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Brands monitored" value={brands?.length ?? 0} />
@@ -55,24 +79,24 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2 bg-white rounded-lg border border-neutral-200 p-6">
+        <section className="lg:col-span-2 app-panel p-6">
           <h2 className="font-semibold mb-4">Quick actions</h2>
           <div className="flex flex-wrap gap-3">
             <Link
               to="/onboarding"
-              className="px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800"
+              className={(brands?.length ?? 0) === 0 ? 'btn-primary' : 'btn-secondary'}
             >
               Onboard a brand
             </Link>
             <Link
               to="/patrols"
-              className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50"
+              className="btn-secondary"
             >
               Run patrol
             </Link>
             <Link
               to="/cases"
-              className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50"
+              className="btn-secondary"
             >
               View cases
             </Link>
@@ -80,24 +104,24 @@ export default function Dashboard() {
 
           {firstBrand && (
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-md border border-neutral-200 p-4">
+              <div className="rounded-lg border border-neutral-200 p-4">
                 <div className="text-xs text-neutral-500 uppercase tracking-wide">Official demo store</div>
                 <a
                   href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/northstar/`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm text-blue-600 hover:underline mt-1 block truncate"
+                  className="text-sm text-violet-600 hover:underline mt-1 block truncate"
                 >
                   Northstar Atelier
                 </a>
               </div>
-              <div className="rounded-md border border-neutral-200 p-4">
+              <div className="rounded-lg border border-neutral-200 p-4">
                 <div className="text-xs text-neutral-500 uppercase tracking-wide">Demo clone threat</div>
                 <a
                   href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/clone/`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm text-blue-600 hover:underline mt-1 block truncate"
+                  className="text-sm text-violet-600 hover:underline mt-1 block truncate"
                 >
                   Suspicious clone
                 </a>
@@ -106,7 +130,7 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+        <section className="app-panel overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Recent patrol runs</div>
           <ul className="divide-y divide-neutral-100">
             {runs?.slice(0, 5).map((run) => (
@@ -123,7 +147,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+        <section className="app-panel overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Discoveries needing review</div>
           <ul className="divide-y divide-neutral-100">
             {discoveries?.slice(0, 5).map((d) => (
@@ -140,7 +164,7 @@ export default function Dashboard() {
           </ul>
         </section>
 
-        <section className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+        <section className="app-panel overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Active cases</div>
           <ul className="divide-y divide-neutral-100">
             {activeCases?.slice(0, 5).map((c) => (
@@ -172,7 +196,7 @@ function KpiCard({ label, value, tone }: { label: string; value: number; tone?: 
     success: 'bg-emerald-50 border-emerald-200',
   }
   return (
-    <div className={`rounded-lg border p-5 ${toneClasses[tone ?? 'neutral']}`}>
+    <div className={`rounded-xl border p-5 ${toneClasses[tone ?? 'neutral']}`}>
       <div className="text-sm text-neutral-600">{label}</div>
       <div className="text-3xl font-bold mt-1">{value}</div>
     </div>

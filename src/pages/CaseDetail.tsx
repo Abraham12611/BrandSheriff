@@ -3,10 +3,14 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
+import { useWorkspace } from '../lib/workspace'
+import PageHeader from '../components/PageHeader'
+import Loading from '../components/Loading'
 
 export default function CaseDetail() {
   const { id } = useParams<{ id: string }>()
   const [to, setTo] = useState('abuse@example.com')
+  const { organization } = useWorkspace()
   const c = useQuery(api.cases.get, id ? ({ caseId: id as any } as { caseId: Id<'cases'> }) : 'skip')
   const evidence = useQuery(
     api.evidenceItems.listByCase,
@@ -21,7 +25,6 @@ export default function CaseDetail() {
     c?.discoveryId ? ({ discoveryId: c.discoveryId as any } as { discoveryId: Id<'discoveries'> }) : 'skip',
   )
   const draft = useQuery(api.draftNotices.latest, id ? ({ caseId: id as any } as { caseId: Id<'cases'> }) : 'skip')
-  const org = useQuery(api.organizations.list)
   const generate = useAction(api.enforcement.generateDraft)
   const update = useMutation(api.enforcement.updateDraft)
   const approveSend = useAction(api.enforcement.approveAndSend)
@@ -55,9 +58,8 @@ export default function CaseDetail() {
   }
 
   const handleResolveInbox = async () => {
-    const firstOrg = org?.[0]
-    if (!firstOrg) return
-    await resolveInbox({ organizationId: firstOrg._id })
+    if (!organization) return
+    await resolveInbox({ organizationId: organization._id })
   }
 
   const handleStartWatch = async () => {
@@ -70,34 +72,34 @@ export default function CaseDetail() {
   }
 
   if (!c) {
-    return <div className="p-8 text-neutral-500">Loading case...</div>
+    return <Loading message="Loading case…" />
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">{c.title}</h1>
-          <StateBadge state={c.state} />
-        </div>
-        <p className="text-sm text-neutral-500 mt-1">{c.caseNumber}</p>
-      </div>
+      <PageHeader
+        title={c.title}
+        subtitle={c.caseNumber}
+        backTo="/cases"
+        backLabel="Cases"
+        actions={<StateBadge state={c.state} />}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
+          <div className="app-panel p-5">
             <h2 className="font-semibold mb-2">Summary</h2>
             <p className="text-sm text-neutral-700">{c.summary || 'No summary yet.'}</p>
           </div>
 
           {discovery && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-5">
+            <div className="app-panel p-5">
               <h2 className="font-semibold mb-2">Original discovery</h2>
               <a
                 href={discovery.canonicalUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm text-blue-600 hover:underline block truncate"
+                className="text-sm text-violet-600 hover:underline block truncate"
               >
                 {discovery.canonicalUrl}
               </a>
@@ -110,13 +112,14 @@ export default function CaseDetail() {
             </div>
           )}
 
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
+          <div className="app-panel p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold">Enforcement draft</h2>
               {!draft && (
                 <button
                   onClick={handleGenerate}
-                  className="px-3 py-1.5 bg-neutral-900 text-white rounded-md text-xs font-medium hover:bg-neutral-800"
+                  title="Generate an editable draft from the case evidence (provider actions are still gated)"
+                  className="btn-primary"
                 >
                   Generate draft
                 </button>
@@ -125,33 +128,36 @@ export default function CaseDetail() {
             {draft ? (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-neutral-500">Recipient</label>
+                  <label htmlFor="recipient" className="text-xs text-neutral-500">Recipient</label>
                   <input
+                    id="recipient"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md text-sm"
+                    className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm"
                     placeholder="abuse@example.com"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-500">Body</label>
+                  <label htmlFor="draftBody" className="text-xs text-neutral-500">Body</label>
                   <textarea
+                    id="draftBody"
                     value={draft.body ?? ''}
                     onChange={(e) => update({ draftId: draft._id, body: e.target.value })}
                     rows={8}
-                    className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md text-sm font-mono"
+                    className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm font-mono"
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleSaveDraft}
-                    className="px-3 py-1.5 bg-white border border-neutral-300 rounded-md text-xs font-medium hover:bg-neutral-50"
+                    className="btn-secondary"
                   >
                     Save changes
                   </button>
                   <button
                     onClick={handleSend}
-                    className="px-3 py-1.5 bg-neutral-900 text-white rounded-md text-xs font-medium hover:bg-neutral-800"
+                    title="Approve and send this draft (provider actions are still gated)"
+                    className="btn-primary"
                   >
                     Approve & send
                   </button>
@@ -162,7 +168,7 @@ export default function CaseDetail() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="app-panel overflow-hidden">
             <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Evidence locker</div>
             <ul className="divide-y divide-neutral-100">
               {allEvidence.map((item) => (
@@ -176,13 +182,13 @@ export default function CaseDetail() {
                       href={item.sourceUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-blue-600 hover:underline block truncate"
+                      className="text-xs text-violet-600 hover:underline block truncate"
                     >
                       {item.sourceUrl}
                     </a>
                   )}
                   {item.textContent && (
-                    <pre className="mt-2 text-xs text-neutral-600 bg-neutral-50 p-2 rounded-md overflow-auto max-h-40">
+                    <pre className="mt-2 text-xs text-neutral-600 bg-neutral-50 p-2 rounded-lg overflow-auto max-h-40">
                       {item.textContent}
                     </pre>
                   )}
@@ -194,7 +200,7 @@ export default function CaseDetail() {
             </ul>
           </div>
 
-          <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="app-panel overflow-hidden">
             <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Verification rechecks</div>
             <ul className="divide-y divide-neutral-100">
               {rechecks?.map((r) => (
@@ -205,7 +211,7 @@ export default function CaseDetail() {
                   </div>
                   {r.availability && <p className="text-sm font-medium mt-1">Outcome: {r.availability}</p>}
                   {r.comparisonResult && (
-                    <pre className="mt-1 text-xs text-neutral-600 bg-neutral-50 p-2 rounded-md overflow-auto max-h-32">
+                    <pre className="mt-1 text-xs text-neutral-600 bg-neutral-50 p-2 rounded-lg overflow-auto max-h-32">
                       {r.comparisonResult}
                     </pre>
                   )}
@@ -217,12 +223,13 @@ export default function CaseDetail() {
             </ul>
           </div>
 
-          <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="app-panel overflow-hidden">
             <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50 font-medium">Hydra watch</div>
             <div className="px-4 py-3">
               <button
                 onClick={handleStartWatch}
-                className="px-3 py-1.5 bg-neutral-900 text-white rounded-md text-xs font-medium hover:bg-neutral-800"
+                title="Watch for reappearance of this case target (provider actions are still gated)"
+                className="btn-primary"
               >
                 Start watching for reappearance
               </button>
@@ -233,7 +240,8 @@ export default function CaseDetail() {
                   <span className="text-sm">Watch active</span>
                   <button
                     onClick={() => handleRunWatch(w._id)}
-                    className="px-3 py-1.5 bg-white border border-neutral-300 rounded-md text-xs font-medium hover:bg-neutral-50"
+                    title="Run the watch now (provider actions are still gated)"
+                    className="btn-secondary"
                   >
                     Run now
                   </button>
@@ -247,28 +255,34 @@ export default function CaseDetail() {
         </section>
 
         <aside className="space-y-4">
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
+          <div className="app-panel p-5">
             <h2 className="font-semibold mb-3">Actions</h2>
             <div className="space-y-2">
               <button
                 onClick={handleResolveInbox}
-                className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50"
+                title="Fetch the latest AgentMail inbox status (provider actions are still gated)"
+                className="btn-secondary w-full"
               >
                 Connect AgentMail inbox
               </button>
               <button
                 onClick={handleRecheck}
-                className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50"
+                title="Re-check the target page and compare against evidence (provider actions are still gated)"
+                className="btn-secondary w-full"
               >
                 Run verification
               </button>
-              <button className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50">
+              <button
+                title="Mark this case resolved after human review"
+                className="btn-secondary w-full"
+                disabled
+              >
                 Mark resolved
               </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
+          <div className="app-panel p-5">
             <h2 className="font-semibold mb-2">Properties</h2>
             <dl className="text-sm space-y-2">
               <div className="flex justify-between">
@@ -300,7 +314,7 @@ function StateBadge({ state }: { state: string }) {
     sent: 'bg-emerald-50 text-emerald-700',
   }
   return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${styles[state] ?? 'bg-neutral-100 text-neutral-700'}`}>
+    <span className={`badge ${styles[state] ?? 'bg-neutral-100 text-neutral-700'}`}>
       {state}
     </span>
   )
