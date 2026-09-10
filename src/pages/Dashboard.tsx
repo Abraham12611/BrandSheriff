@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useAction } from 'convex/react'
+import { useQuery } from 'convex/react'
+import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 
 export default function Dashboard() {
@@ -12,26 +12,12 @@ export default function Dashboard() {
     api.patrolRuns.listByBrand,
     firstBrand ? { brandId: firstBrand._id } : 'skip',
   )
-  const loadDemo = useMutation(api.seed.loadDemoWorkspace)
-  const crawl = useAction(api.brandDna.crawl)
-  const [seeding, setSeeding] = useState(false)
-
-  const handleLoadDemo = async () => {
-    setSeeding(true)
-    try {
-      const demoBaseUrl = import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin
-      const { brandId } = await loadDemo({ demoBaseUrl })
-      await crawl({ brandId, url: `${demoBaseUrl}/demo/northstar/` })
-    } finally {
-      setSeeding(false)
-    }
-  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Command Center</h1>
-        <p className="text-neutral-600 mt-1">Real-time overview of your brand defense operations.</p>
+        <p className="text-neutral-600 mt-1">Prototype overview of brand defense operations.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -45,22 +31,24 @@ export default function Dashboard() {
         <section className="lg:col-span-2 bg-white rounded-lg border border-neutral-200 p-6">
           <h2 className="font-semibold mb-4">Quick actions</h2>
           <div className="flex flex-wrap gap-3">
-            <a href="/onboarding" className="px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800">
-              Onboard a brand
-            </a>
-            <a href="/patrols" className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50">
-              Run patrol
-            </a>
-            <a href="/cases" className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50">
-              View cases
-            </a>
-            <button
-              onClick={handleLoadDemo}
-              disabled={seeding}
-              className="px-4 py-2 bg-amber-500 text-neutral-900 rounded-md text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
+            <Link
+              to="/onboarding"
+              className="px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800"
             >
-              {seeding ? 'Loading demo...' : 'Load Northstar demo'}
-            </button>
+              Onboard a brand
+            </Link>
+            <Link
+              to="/patrols"
+              className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50"
+            >
+              Run patrol
+            </Link>
+            <Link
+              to="/cases"
+              className="px-4 py-2 bg-white border border-neutral-300 rounded-md text-sm font-medium hover:bg-neutral-50"
+            >
+              View cases
+            </Link>
           </div>
 
           {firstBrand && (
@@ -113,9 +101,9 @@ export default function Dashboard() {
           <ul className="divide-y divide-neutral-100">
             {discoveries?.slice(0, 5).map((d) => (
               <li key={d._id} className="px-4 py-3">
-                <a href="/patrols" className="text-sm font-medium hover:underline block truncate">
+                <Link to="/patrols" className="text-sm font-medium hover:underline block truncate">
                   {d.title ?? d.canonicalUrl}
-                </a>
+                </Link>
                 <p className="text-xs text-neutral-500 truncate">{d.canonicalUrl}</p>
               </li>
             ))}
@@ -130,9 +118,12 @@ export default function Dashboard() {
           <ul className="divide-y divide-neutral-100">
             {activeCases?.slice(0, 5).map((c) => (
               <li key={c._id} className="px-4 py-3">
-                <a href={`/#/cases/${c._id}`} className="text-sm font-medium hover:underline block truncate">
+                <Link
+                  to={`/cases/${c._id}`}
+                  className="text-sm font-medium hover:underline block truncate"
+                >
                   {c.title}
-                </a>
+                </Link>
                 <p className="text-xs text-neutral-500">{c.caseNumber} · {c.severity ?? '—'}</p>
               </li>
             ))}

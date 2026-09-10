@@ -1,4 +1,5 @@
 import { useQuery } from 'convex/react'
+import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 
 export default function BrandDNA() {
@@ -33,7 +34,7 @@ export default function BrandDNA() {
             {brands?.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
-                  No brands yet. <a href="/onboarding" className="underline">Onboard one</a>.
+                  No brands yet. <Link to="/onboarding" className="underline">Onboard one</Link>.
                 </td>
               </tr>
             )}

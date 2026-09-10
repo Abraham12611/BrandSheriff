@@ -1,13 +1,27 @@
-<!-- convex-ai-start -->
+# Agent notes
 
-This project uses [Convex](https://convex.dev) as its backend.
+## Phase 0 verification commands
 
-When working on Convex code, **always read
-`convex/_generated/ai/guidelines.md` first** for important guidelines on
-how to correctly use Convex APIs and patterns. The file contains rules that
-override what you may have learned about Convex from training data.
+All commands below are intended to run from the repository root.
 
-Convex agent skills for common tasks can be installed by running
-`npx convex ai-files install`.
+```bash
+# Full CI-style verification (typecheck, lint, test, build)
+npm run check
 
-<!-- convex-ai-end -->
+# Individual checks
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+```
+
+## Project state
+
+- The current build is a **read-only prototype** while authentication, multi-tenancy, and approval controls are being implemented.
+- Public Convex mutations and actions fail closed with `PROTOTYPE_READ_ONLY` until those controls land.
+- Demo seeding is not exposed in the main dashboard; the controlled demo storefronts remain under `public/demo/`.
+- `convex/_generated` is now versioned so CI can build and test without a live `convex dev` codegen step.
+
+## Dependency audit
+
+`npm audit` still reports known issues in `react-router-dom`, `vite`, `vitest`, and transitive `esbuild`. They require major-version upgrades and should be treated as a dedicated follow-up task; do not claim the audit is clean until `npm audit` passes after those upgrades.

@@ -7,6 +7,11 @@
     "dev": "convex dev",
     "dev:frontend": "vite",
     "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p convex/tsconfig.json --noEmit",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "preview": "vite preview",
     "convex": "convex",
     "deploy": "npx @convex-dev/static-hosting deploy --no-spa"
@@ -22,13 +27,24 @@
     "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "5.0.0",
+    "@eslint/js": "9.39.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
+    "convex-test": "0.0.56",
+    "eslint": "9.39.1",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "globals": "16.5.0",
+    "jsdom": "26.1.0",
     "postcss": "^8.4.45",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.6.2",
-    "vite": "^5.4.5"
+    "typescript-eslint": "8.48.1",
+    "vite": "^5.4.5",
+    "vitest": "3.2.6"
   }
 }

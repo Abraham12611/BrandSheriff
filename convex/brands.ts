@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 export const list = query({
   args: {},
@@ -14,6 +15,7 @@ export const create = mutation({
     canonicalDomain: v.string(),
   },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const existingOrg = await ctx.db.query("organizations").first();
     let organizationId;
     if (existingOrg) {

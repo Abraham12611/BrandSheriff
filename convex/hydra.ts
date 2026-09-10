@@ -3,6 +3,7 @@ import { action, mutation, query, internalQuery, internalMutation } from "./_gen
 import { internal } from "./_generated/api";
 import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 import type { Doc } from "./_generated/dataModel";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
@@ -10,6 +11,7 @@ const firecrawl = new FirecrawlClient(components.firecrawl);
 export const startWatch = mutation({
   args: { caseId: v.id("cases"), brandId: v.id("brands"), fingerprint: v.optional(v.any()) },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const c = await ctx.db.get("cases", args.caseId);
     if (!c) throw new Error("Case not found");
     await ctx.db.insert("hydraWatches", {
@@ -27,6 +29,7 @@ export const startWatch = mutation({
 export const runWatch = action({
   args: { watchId: v.id("hydraWatches") },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const watch = (await ctx.runQuery(internal.hydra.getById, { watchId: args.watchId })) as Doc<"hydraWatches"> | null;
     if (!watch) throw new Error("Watch not found");
     const brand = (await ctx.runQuery(internal.brands.get, { brandId: watch.brandId })) as Doc<"brands"> | null;

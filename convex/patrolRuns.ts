@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 export const listByBrand = query({
   args: { brandId: v.id("brands") },
@@ -17,6 +18,7 @@ export const start = mutation({
     type: v.string(),
   },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const brand = await ctx.db.get("brands", args.brandId);
     if (!brand) throw new Error("Brand not found");
 

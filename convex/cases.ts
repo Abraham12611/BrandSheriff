@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, internalQuery, mutation, internalMutation } from "./_generated/server";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 export const listByState = query({
   args: { state: v.string() },
@@ -31,6 +32,7 @@ export const createFromDiscovery = mutation({
     summary: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const discovery = await ctx.db.get("discoveries", args.discoveryId);
     if (!discovery) throw new Error("Discovery not found");
 

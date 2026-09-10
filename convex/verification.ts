@@ -5,6 +5,7 @@ import { env } from "./_generated/server";
 import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import type { Doc } from "./_generated/dataModel";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
@@ -38,6 +39,7 @@ async function openaiChat(messages: Array<{ role: string; content: string }>, mo
 export const recheckTarget = action({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const c = (await ctx.runQuery(internal.cases.getById, { caseId: args.caseId })) as Doc<"cases"> | null;
     if (!c) throw new Error("Case not found");
     const discovery = c.discoveryId

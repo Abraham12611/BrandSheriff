@@ -3,6 +3,7 @@ import { action, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { env } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -35,6 +36,7 @@ async function openaiChat(messages: Array<{ role: string; content: string }>, mo
 export const generateDraft = action({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const c = (await ctx.runQuery(internal.cases.getById, { caseId: args.caseId })) as Doc<"cases"> | null;
     if (!c) throw new Error("Case not found");
 
@@ -93,6 +95,7 @@ export const updateDraft = mutation({
     body: v.string(),
   },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const draft = await ctx.db.get("draftNotices", args.draftId);
     if (!draft) throw new Error("Draft not found");
     await ctx.db.patch(args.draftId, {
@@ -109,6 +112,7 @@ export const approveAndSend = action({
     to: v.string(),
   },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const c = (await ctx.runQuery(internal.cases.getById, { caseId: args.caseId })) as Doc<"cases"> | null;
     if (!c) throw new Error("Case not found");
     const org = (await ctx.runQuery(internal.organizations.get, {

@@ -1,4 +1,5 @@
 import { useQuery } from 'convex/react'
+import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 
 export default function Cases() {
@@ -21,7 +22,7 @@ export default function Cases() {
             {cases?.map((c) => (
               <tr key={c._id} className="border-b border-neutral-100 last:border-0">
                 <td className="px-4 py-3 font-medium">
-                  <a href={`/#/cases/${c._id}`} className="hover:underline">{c.title}</a>
+                  <Link to={`/cases/${c._id}`} className="hover:underline">{c.title}</Link>
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={c.state} />

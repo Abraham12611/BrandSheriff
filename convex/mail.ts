@@ -2,12 +2,14 @@ import { v } from "convex/values";
 import { internalMutation, query, action } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { AgentMail, vOutboundId } from "@agentmail/convex";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 const agentmail = new AgentMail(components.agentmail);
 
 export const resolveInbox = action({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     const inboxes = await agentmail.listInboxes(ctx);
     const list = (inboxes as { data?: Array<{ inbox_id: string; email: string; display_name?: string }> }).data ?? [];
     const inbox = list[0];

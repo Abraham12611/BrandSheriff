@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
+import { assertPrototypeWriteEnabled } from "./prototypeSafety";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 
@@ -12,6 +13,7 @@ export const runSearch = action({
     queries: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    assertPrototypeWriteEnabled();
     await ctx.runMutation(internal.patrolRuns.updateStatus, {
       runId: args.runId,
       status: "running",

@@ -1,11 +1,11 @@
 node_modules
 .env.local
 .env
-convex/_generated
 *.local
 .DS_Store
 dist
 .agents/
 .claude/
 .devin/docs/
+convex/_generated/ai
 
