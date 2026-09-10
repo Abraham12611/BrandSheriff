@@ -1,8 +1,10 @@
 import { useQuery } from 'convex/react'
 import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
+import { useWorkspace } from '../lib/workspace'
 
 export default function Dashboard() {
+  const { organization, isLoading } = useWorkspace()
   const brands = useQuery(api.brands.list)
   const firstBrand = brands?.[0]
   const discoveries = useQuery(api.discoveries.listByStatus, { status: 'needs_review' })
@@ -13,11 +15,36 @@ export default function Dashboard() {
     firstBrand ? { brandId: firstBrand._id } : 'skip',
   )
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center text-sm text-neutral-500">
+        Loading workspace…
+      </div>
+    )
+  }
+
+  if (!organization) {
+    return (
+      <div className="max-w-xl mx-auto bg-white rounded-lg border border-neutral-200 p-8 text-center">
+        <h1 className="text-2xl font-bold">Create your workspace</h1>
+        <p className="text-neutral-600 mt-2">
+          Before you can monitor brands and cases, you need a BrandSheriff workspace.
+        </p>
+        <Link
+          to="/onboarding"
+          className="inline-block mt-6 px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800"
+        >
+          Set up workspace
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Command Center</h1>
-        <p className="text-neutral-600 mt-1">Prototype overview of brand defense operations.</p>
+        <p className="text-neutral-600 mt-1">Workspace: {organization.name}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

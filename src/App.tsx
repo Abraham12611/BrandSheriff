@@ -7,23 +7,26 @@ import BrandDNA from './pages/BrandDNA'
 import Patrols from './pages/Patrols'
 import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
+import { WorkspaceProvider } from './lib/workspace'
 
 function App() {
   return (
     <HashRouter>
       <AuthGate>
-        <AppShell>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/brand" element={<BrandDNA />} />
-            <Route path="/patrols" element={<Patrols />} />
-            <Route path="/cases" element={<Cases />} />
-            <Route path="/cases/:id" element={<CaseDetail />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppShell>
+        <WorkspaceProvider>
+          <AppShell>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/brand" element={<BrandDNA />} />
+              <Route path="/patrols" element={<Patrols />} />
+              <Route path="/cases" element={<Cases />} />
+              <Route path="/cases/:id" element={<CaseDetail />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppShell>
+        </WorkspaceProvider>
       </AuthGate>
     </HashRouter>
   )

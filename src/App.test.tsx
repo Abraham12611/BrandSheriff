@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -22,6 +22,11 @@ vi.mock('@clerk/react', () => ({
     isSignedIn: mockAuth.isAuthenticated,
     getToken: vi.fn(async () => null),
   })),
+  useOrganization: vi.fn(() => ({
+    isLoaded: true,
+    organization: null,
+    membership: null,
+  })),
   SignIn: () => <div data-testid="clerk-sign-in">Sign in</div>,
   UserButton: () => <div data-testid="clerk-user-button">User</div>,
 }))
@@ -32,11 +37,9 @@ beforeEach(() => {
 })
 
 describe('authenticated navigation and safety disclosure', () => {
-  it('keeps dashboard quick actions within the hash router', () => {
+  it('prompts to create a workspace when the user has none', () => {
     render(<App />)
-    expect(screen.getByRole('link', { name: 'Onboard a brand' })).toHaveAttribute('href', '#/onboarding')
-    expect(screen.getByRole('link', { name: 'Run patrol' })).toHaveAttribute('href', '#/patrols')
-    expect(screen.getByRole('link', { name: 'View cases' })).toHaveAttribute('href', '#/cases')
+    expect(screen.getByRole('link', { name: 'Set up workspace' })).toHaveAttribute('href', '#/onboarding')
   })
 
   it('does not claim a live or unauthenticated workspace', () => {
@@ -59,16 +62,19 @@ describe('authenticated navigation and safety disclosure', () => {
     expect(screen.getByRole('link', { name: 'Return to Command Center' })).toHaveAttribute('href', '#/dashboard')
   })
 
-  it('disables onboarding writes while showing the reason', () => {
+  it('shows a real onboarding form but requires workspace details', () => {
     window.location.hash = '#/onboarding'
     render(<App />)
-    expect(screen.getByRole('button', { name: 'Build Brand DNA' })).toBeDisabled()
+    const submit = screen.getByRole('button', { name: 'Create workspace' })
+    expect(submit).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Workspace name'), { target: { value: 'Northstar' } })
+    expect(submit).not.toBeDisabled()
   })
 
   it('gates the app behind authentication when signed out', () => {
     mockAuth.isAuthenticated = false
     render(<App />)
     expect(screen.getByTestId('clerk-sign-in')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Onboard a brand' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Set up workspace' })).not.toBeInTheDocument()
   })
 })
