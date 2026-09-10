@@ -1,8 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ClerkProvider, useAuth } from '@clerk/react'
+import { ClerkProvider } from '@clerk/react'
 import { ConvexReactClient } from 'convex/react'
-import { ConvexProviderWithClerk } from 'convex/react-clerk'
+import ConvexClerkProvider from './components/ConvexClerkProvider'
 import App from './App.tsx'
 import './index.css'
 
@@ -31,9 +31,9 @@ function Root() {
   }
   return (
     <ClerkProvider publishableKey={publishableKey}>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <ConvexClerkProvider client={convex}>
         <App />
-      </ConvexProviderWithClerk>
+      </ConvexClerkProvider>
     </ClerkProvider>
   )
 }

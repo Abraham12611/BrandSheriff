@@ -17,6 +17,11 @@ vi.mock('convex/react', () => ({
 }))
 
 vi.mock('@clerk/react', () => ({
+  useAuth: vi.fn(() => ({
+    isLoaded: true,
+    isSignedIn: mockAuth.isAuthenticated,
+    getToken: vi.fn(async () => null),
+  })),
   SignIn: () => <div data-testid="clerk-sign-in">Sign in</div>,
   UserButton: () => <div data-testid="clerk-user-button">User</div>,
 }))
