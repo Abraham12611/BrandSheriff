@@ -4,10 +4,11 @@ export default function PrototypeBanner() {
       role="alert"
       className="bg-amber-50 border-b border-amber-200 px-6 py-3 text-sm text-amber-800"
     >
-      <span className="font-semibold">Read-only prototype.</span>{' '}
-      Authentication and workspace tenancy are now active. Provider-driven actions
-      (crawl, send, forensics) remain gated until their contracts are verified. Do not add
-      company data or treat the displayed case data as verified.
+      <span className="font-semibold">Development environment.</span>{' '}
+      Authentication, workspace tenancy, and provider-action controls are active.
+      Provider calls still require an owner/admin to enable them for the workspace
+      and can call live paid APIs. Do not add company data or treat unverified
+      case data as verified.
     </div>
   )
 }
