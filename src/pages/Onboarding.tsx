@@ -20,8 +20,9 @@ export default function Onboarding() {
   const [workspaceSlug, setWorkspaceSlug] = useState(slugify(clerkOrg?.name ?? ''))
   const [brandName, setBrandName] = useState('')
   const [canonicalDomain, setCanonicalDomain] = useState('')
-  const [organizationId, setOrganizationId] = useState<Id<'organizations'> | null>(null)
-  const [step, setStep] = useState<'workspace' | 'brand'>('workspace')
+  const [organizationId, setOrganizationId] = useState<Id<'organizations'> | null>(organization?._id ?? null)
+  const [step, setStep] = useState<'workspace' | 'brand'>(organization ? 'brand' : 'workspace')
+  const [creatingNewWorkspace, setCreatingNewWorkspace] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,10 +30,11 @@ export default function Onboarding() {
   const createBrand = useMutation(api.brands.create)
 
   useEffect(() => {
-    if (organization) {
-      navigate('/dashboard')
+    if (organization && !creatingNewWorkspace) {
+      setOrganizationId(organization._id)
+      setStep('brand')
     }
-  }, [organization, navigate])
+  }, [organization, creatingNewWorkspace])
 
   useEffect(() => {
     if (clerkOrg?.name) {
@@ -82,12 +84,29 @@ export default function Onboarding() {
         subtitle={
           step === 'workspace'
             ? 'Create the workspace that will own your brands and cases.'
-            : 'Add the first brand you want to protect. You can add more later.'
+            : 'Add a brand you want to protect. You can add more later.'
         }
       />
 
       {error && (
         <div className="mt-6 p-4 bg-rose-50 text-rose-700 rounded-lg text-sm">{error}</div>
+      )}
+
+      {step === 'brand' && organization && !creatingNewWorkspace && (
+        <p className="mt-4 text-sm text-neutral-600">
+          Adding to workspace <span className="font-medium text-neutral-900">{organization.name}</span>.{' '}
+          <button
+            type="button"
+            onClick={() => {
+              setCreatingNewWorkspace(true)
+              setOrganizationId(null)
+              setStep('workspace')
+            }}
+            className="text-violet-700 hover:text-violet-800 font-medium"
+          >
+            Create a new workspace instead
+          </button>
+        </p>
       )}
 
       {step === 'workspace' ? (
