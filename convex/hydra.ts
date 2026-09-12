@@ -44,7 +44,7 @@ export const runWatch = action({
     for (const query of queries.slice(0, 3)) {
       try {
         const result = await firecrawl.search(ctx, query, { limit: 10 });
-        const data = (result as { data?: Array<{ url?: string }> }).data ?? [];
+        const data = (result as { web?: Array<{ url?: string }> }).web ?? [];
         for (const item of data) {
           if (item.url) foundUrls.add(item.url);
         }

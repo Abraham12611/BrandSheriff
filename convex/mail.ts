@@ -13,7 +13,10 @@ export const resolveInbox = action({
     await assertProviderActionsEnabled(ctx, args.organizationId);
 
     const inboxes = await agentmail.listInboxes(ctx);
-    const list = (inboxes as { data?: Array<{ inbox_id: string; email: string; display_name?: string }> }).data ?? [];
+    // The component returns the raw AgentMail API response: { inboxes: [...] }.
+    const list =
+      (inboxes as { inboxes?: Array<{ inbox_id: string; email: string; display_name?: string }> }).inboxes ??
+      (Array.isArray(inboxes) ? inboxes : []);
     const inbox = list[0];
     if (!inbox) throw new Error("No AgentMail inbox found for this API key");
     await ctx.runMutation(internal.organizations.setMailbox, {

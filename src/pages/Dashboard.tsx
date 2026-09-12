@@ -107,7 +107,7 @@ export default function Dashboard() {
               <div className="rounded-lg border border-neutral-200 p-4">
                 <div className="text-xs text-neutral-500 uppercase tracking-wide">Official demo store</div>
                 <a
-                  href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/northstar/`}
+                  href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/northstar/index.html`}
                   target="_blank"
                   rel="noreferrer"
                   className="text-sm text-violet-600 hover:underline mt-1 block truncate"
@@ -118,7 +118,7 @@ export default function Dashboard() {
               <div className="rounded-lg border border-neutral-200 p-4">
                 <div className="text-xs text-neutral-500 uppercase tracking-wide">Demo clone threat</div>
                 <a
-                  href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/clone/`}
+                  href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/clone/index.html`}
                   target="_blank"
                   rel="noreferrer"
                   className="text-sm text-violet-600 hover:underline mt-1 block truncate"

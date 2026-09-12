@@ -15,7 +15,7 @@ export const loadDemoWorkspace = mutation({
       settings: {},
     });
 
-    const northstarUrl = `${args.demoBaseUrl.replace(/\/$/, "")}/demo/northstar/`;
+    const northstarUrl = `${args.demoBaseUrl.replace(/\/$/, "")}/demo/northstar/index.html`;
     const brandId = await ctx.db.insert("brands", {
       organizationId,
       name: "Northstar Atelier",

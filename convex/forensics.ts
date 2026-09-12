@@ -57,7 +57,7 @@ export const investigateDiscovery = action({
       formats: ["markdown"],
       onlyMainContent: true,
     });
-    const suspectText = ((scrapeResult as unknown) as { data?: { markdown?: string } }).data?.markdown ?? "";
+    const suspectText = (scrapeResult as { markdown?: string }).markdown ?? "";
 
     const assetSnippets = assets
       .filter((a) => a.textContent && a.textContent.length > 20)

@@ -28,22 +28,31 @@ export const crawl = action({
         onlyMainContent: true,
       });
 
-      const data = (scrapeResult as { data?: { markdown?: string; links?: string[]; title?: string; description?: string } }).data;
-      if (!data) {
-        throw new Error("Firecrawl scrape returned no data");
+      // The component already unwraps the Firecrawl envelope: the returned
+      // value IS the scrape document ({ markdown, links, metadata, ... }).
+      const data = scrapeResult as {
+        markdown?: string;
+        links?: string[];
+        metadata?: { title?: string; description?: string };
+      };
+      if (!data.markdown?.trim() && !(data.links && data.links.length > 0)) {
+        throw new Error(`Firecrawl scrape returned no content for ${args.url}`);
       }
 
       await ctx.runMutation(internal.brandAssets.createFromCrawl, {
         organizationId: brand.organizationId,
         brandId: args.brandId,
         sourceUrl: args.url,
-        title: data.title ?? "Homepage",
+        title: data.metadata?.title ?? "Homepage",
         textContent: data.markdown ?? "",
         links: data.links ?? [],
       });
 
       const mapResult = await firecrawl.map(ctx, args.url, { limit: 50 });
-      const links = ((mapResult as unknown) as { links?: string[] }).links ?? [];
+      // The component returns links as { url } objects.
+      const links = ((mapResult as { links?: Array<string | { url?: string }> }).links ?? [])
+        .map((link) => (typeof link === "string" ? link : link.url))
+        .filter((link): link is string => !!link && link !== args.url);
       for (const link of links.slice(0, 20)) {
         await ctx.runMutation(internal.brandAssets.createFromCrawl, {
           organizationId: brand.organizationId,

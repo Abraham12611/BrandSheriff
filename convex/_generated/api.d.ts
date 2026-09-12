@@ -29,7 +29,6 @@ import type * as memberships from "../memberships.js";
 import type * as organizations from "../organizations.js";
 import type * as patrol from "../patrol.js";
 import type * as patrolRuns from "../patrolRuns.js";
-import type * as prototypeSafety from "../prototypeSafety.js";
 import type * as providerSafety from "../providerSafety.js";
 import type * as rechecks from "../rechecks.js";
 import type * as seed from "../seed.js";
@@ -64,7 +63,6 @@ declare const fullApi: ApiFromModules<{
   organizations: typeof organizations;
   patrol: typeof patrol;
   patrolRuns: typeof patrolRuns;
-  prototypeSafety: typeof prototypeSafety;
   providerSafety: typeof providerSafety;
   rechecks: typeof rechecks;
   seed: typeof seed;

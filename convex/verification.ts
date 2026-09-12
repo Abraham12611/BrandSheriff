@@ -65,7 +65,7 @@ export const recheckTarget = action({
         formats: ["markdown"],
         onlyMainContent: true,
       });
-      const suspectText = ((scrapeResult as unknown) as { data?: { markdown?: string } }).data?.markdown ?? "";
+      const suspectText = (scrapeResult as { markdown?: string }).markdown ?? "";
 
       const prompt = `Classify the current state of this web page after a brand enforcement action was attempted.
 

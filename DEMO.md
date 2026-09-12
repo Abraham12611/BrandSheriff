@@ -6,10 +6,12 @@ Open the live app: https://rapid-peccary-734.convex.site
 
 ## Script
 
-### 1. Seed the demo workspace (30s)
+### 1. Create a workspace and crawl the demo brand (45s)
 
-- On the Command Center, click **Load Northstar demo**.
-- This seeds a demo workspace and crawls the official Northstar Atelier storefront (`/demo/northstar/`) via Firecrawl.
+- Sign in, then create a workspace (e.g. "Judge Demo").
+- Add a brand named **Northstar Atelier** with official domain `https://<deployment>.convex.site/demo/northstar/index.html`.
+- On **Brand DNA**, click **Enable provider actions** (owner/admin only), then click **Crawl**.
+- This runs a live Firecrawl scrape + map of the official Northstar Atelier storefront and stores pages/links as brand assets.
 - Mention: the storefront is a real static page served on the same `*.convex.site` deployment; Firecrawl crawls it live.
 
 ### 2. Run a patrol and create a discovery (45s)
@@ -17,7 +19,7 @@ Open the live app: https://rapid-peccary-734.convex.site
 - Go to **Threat Radar** and click **Run patrol**.
 - The patrol uses Firecrawl search for brand terms like "Northstar Atelier" and "Northstar Atelier sale".
 - New discoveries appear in the review queue.
-- Point out that one discovery is the controlled clone page (`/demo/clone/`).
+- Point out that one discovery is the controlled clone page (`/demo/clone/index.html`).
 
 ### 3. Investigate the clone (45s)
 

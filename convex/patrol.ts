@@ -27,7 +27,8 @@ export const runSearch = action({
     for (const query of args.queries.slice(0, 5)) {
       try {
         const result = await firecrawl.search(ctx, query, { limit: 10 });
-        const data = (result as { data?: Array<{ url?: string; title?: string; description?: string }> }).data ?? [];
+        // The component returns body.data directly; web hits live under `web`.
+        const data = (result as { web?: Array<{ url?: string; title?: string; description?: string }> }).web ?? [];
         for (const item of data) {
           if (item.url) foundUrls.add(item.url);
         }
