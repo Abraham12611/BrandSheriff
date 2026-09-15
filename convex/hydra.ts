@@ -1,6 +1,13 @@
 import { v } from "convex/values";
-import { action, mutation, query, internalQuery, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import {
+  action,
+  internalAction,
+  mutation,
+  query,
+  internalQuery,
+  internalMutation,
+} from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import { requireCaseAccess } from "./lib/authz";
@@ -84,6 +91,30 @@ export const list = query({
       .query("hydraWatches")
       .withIndex("by_case", (q) => q.eq("caseId", args.caseId))
       .collect();
+  },
+});
+
+export const listEnabled = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("hydraWatches").collect();
+    return all.filter((w) => w.enabled);
+  },
+});
+
+const SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+export const sweepDue = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const watches = (await ctx.runQuery(internal.hydra.listEnabled, {})) as Doc<"hydraWatches">[];
+    const due = watches.filter(
+      (w) => !w.lastRunAt || Date.now() - w.lastRunAt > SWEEP_INTERVAL_MS,
+    );
+    for (const w of due) {
+      await ctx.scheduler.runAfter(0, api.hydra.runWatch, { watchId: w._id });
+    }
+    return { scheduled: due.length, enabled: watches.length };
   },
 });
 

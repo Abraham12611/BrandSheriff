@@ -12,10 +12,12 @@ import {
   ShieldCheck,
   Tag,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 import { useWorkspace } from '../lib/workspace'
+import { useToast } from '../components/Toasts'
 import PageHeader from '../components/PageHeader'
 import Loading from '../components/Loading'
 import EmptyState from '../components/EmptyState'
@@ -244,7 +246,7 @@ export default function BrandProfile() {
           </div>
 
           {tab === 'overview' && <OverviewTab brand={brand} assetCount={assets?.length ?? 0} />}
-          {tab === 'assets' && <AssetsTab assets={assets} />}
+          {tab === 'assets' && <AssetsTab brandId={brand._id} assets={assets} />}
           {tab === 'keywords' && (
             <KeywordsTab brand={brand} onSave={(keywords) => setKeywords({ brandId: brand._id, keywords })} />
           )}
@@ -357,14 +359,50 @@ function OverviewTab({ brand, assetCount }: { brand: Doc<'brands'>; assetCount: 
   )
 }
 
-function AssetsTab({ assets }: { assets: Doc<'brandAssets'>[] | undefined }) {
+function AssetsTab({
+  brandId,
+  assets,
+}: {
+  brandId: Id<'brands'>
+  assets: Array<Doc<'brandAssets'> & { fileUrl?: string | null }> | undefined
+}) {
+  const toast = useToast()
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [selection, setSelection] = useState<Set<string>>(new Set())
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const setMonitor = useMutation(api.brandAssets.setMonitor)
   const bulkSetMonitor = useMutation(api.brandAssets.bulkSetMonitor)
   const bulkRemove = useMutation(api.brandAssets.bulkRemove)
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl)
+  const createDocument = useMutation(api.brandAssets.createDocument)
+
+  const handleUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const uploadUrl = await generateUploadUrl({ brandId })
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      })
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`)
+      const { storageId } = (await res.json()) as { storageId: string }
+      await createDocument({
+        brandId,
+        title: file.name,
+        fileId: storageId,
+        contentType: file.type || undefined,
+      })
+      toast.success(`Uploaded ${file.name}`)
+      setTypeFilter('document')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const types = useMemo(
     () => [...new Set((assets ?? []).map((a) => a.type))].sort(),
@@ -414,15 +452,32 @@ function AssetsTab({ assets }: { assets: Doc<'brandAssets'>[] | undefined }) {
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-xs text-neutral-600 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={toggleAll}
-            className="w-3.5 h-3.5 rounded border-neutral-300 accent-neutral-900"
-          />
-          Select all
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="btn-secondary !py-1.5 text-xs cursor-pointer">
+            <Upload className="w-3.5 h-3.5" />
+            {uploading ? 'Uploading…' : 'Upload document'}
+            <input
+              type="file"
+              className="hidden"
+              disabled={uploading}
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) handleUpload(f)
+                e.target.value = ''
+              }}
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-neutral-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="w-3.5 h-3.5 rounded border-neutral-300 accent-neutral-900"
+            />
+            Select all
+          </label>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
@@ -494,6 +549,17 @@ function AssetsTab({ assets }: { assets: Doc<'brandAssets'>[] | undefined }) {
                   >
                     <ExternalLink className="w-3 h-3 shrink-0" />
                     <span className="truncate">{asset.sourceUrl}</span>
+                  </a>
+                )}
+                {asset.fileUrl && (
+                  <a
+                    href={asset.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-neutral-500 hover:text-neutral-900 hover:underline flex items-center gap-1 mt-2 ml-6"
+                  >
+                    <FileText className="w-3 h-3 shrink-0" />
+                    Open file
                   </a>
                 )}
 
@@ -578,10 +644,10 @@ function KeywordsTab({
   brand: Doc<'brands'>
   onSave: (keywords: string[]) => Promise<unknown>
 }) {
+  const toast = useToast()
   const [keywords, setKeywords] = useState<string[]>(brand.keywords ?? [])
   const [input, setInput] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     setKeywords(brand.keywords ?? [])
@@ -595,11 +661,11 @@ function KeywordsTab({
 
   const save = async () => {
     setSaving(true)
-    setSaved(false)
     try {
       await onSave(keywords)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      toast.success('Keywords saved — patrols will use them')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -651,7 +717,6 @@ function KeywordsTab({
           <button onClick={save} disabled={saving} className="btn-primary">
             {saving ? 'Saving…' : 'Save keywords'}
           </button>
-          {saved && <span className="text-xs text-emerald-600">Saved</span>}
         </div>
       </section>
     </div>
@@ -665,10 +730,10 @@ function AllowlistTab({
   brand: Doc<'brands'>
   onSave: (domains: string[]) => Promise<unknown>
 }) {
+  const toast = useToast()
   const [domains, setDomains] = useState<string[]>(brand.allowlist ?? [])
   const [input, setInput] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     setDomains(brand.allowlist ?? [])
@@ -682,11 +747,11 @@ function AllowlistTab({
 
   const save = async () => {
     setSaving(true)
-    setSaved(false)
     try {
       await onSave(domains)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      toast.success('Allowlist saved')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -734,7 +799,6 @@ function AllowlistTab({
           <button onClick={save} disabled={saving} className="btn-primary">
             {saving ? 'Saving…' : 'Save allowlist'}
           </button>
-          {saved && <span className="text-xs text-emerald-600">Saved</span>}
         </div>
       </section>
     </div>

@@ -54,6 +54,28 @@ export const createFromCrawl = internalMutation({
   },
 });
 
+export const createDocument = mutation({
+  args: {
+    brandId: v.id("brands"),
+    title: v.string(),
+    fileId: v.string(),
+    contentType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { brand } = await requireBrandAccess(ctx, args.brandId);
+    const assetId = await ctx.db.insert("brandAssets", {
+      organizationId: brand.organizationId,
+      brandId: args.brandId,
+      type: "document",
+      title: args.title,
+      fileId: args.fileId,
+      status: "active",
+      monitorEnabled: false,
+    });
+    return assetId;
+  },
+});
+
 export const list = query({
   args: { brandId: v.id("brands") },
   handler: async (ctx, args) => {
@@ -62,10 +84,15 @@ export const list = query({
       .query("brandAssets")
       .withIndex("by_brand", (q) => q.eq("brandId", args.brandId))
       .collect();
-    return assets.map((a) => ({
-      ...a,
-      textContent: a.textContent ? a.textContent.slice(0, 500) : a.textContent,
-    }));
+    return await Promise.all(
+      assets.map(async (a) => ({
+        ...a,
+        textContent: a.textContent ? a.textContent.slice(0, 500) : a.textContent,
+        fileUrl: a.fileId
+          ? await ctx.storage.getUrl(a.fileId as Id<"_storage">)
+          : undefined,
+      })),
+    );
   },
 });
 

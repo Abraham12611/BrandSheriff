@@ -20,6 +20,7 @@ import EnableProviderActions from '../components/EnableProviderActions'
 import CompareCard, { type DiscoveryAction } from '../components/discoveries/CompareCard'
 import AddDiscoveryModal from '../components/discoveries/AddDiscoveryModal'
 import Modal from '../components/Modal'
+import { useToast } from '../components/Toasts'
 
 const TABS = [
   { key: 'needs_review', label: 'Needs Review' },
@@ -50,6 +51,7 @@ function sortDiscoveries(list: Doc<'discoveries'>[], sort: SortKey) {
 export default function Discoveries() {
   const { organization, providerActionsEnabled } = useWorkspace()
   const navigate = useNavigate()
+  const toast = useToast()
   const brands = useQuery(api.brands.list)
   const [selectedBrandId, setSelectedBrandId] = useState<Id<'brands'> | 'all'>('all')
   const [tab, setTab] = useState<TabKey>('needs_review')
@@ -58,6 +60,7 @@ export default function Discoveries() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showRuns, setShowRuns] = useState(false)
   const [confirmApproveAll, setConfirmApproveAll] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const [denyReason, setDenyReason] = useState('Wrong match')
   const [running, setRunning] = useState(false)
   const [working, setWorking] = useState<Record<string, boolean>>({})
@@ -122,8 +125,11 @@ export default function Discoveries() {
       setWorking((p) => ({ ...p, [id]: true }))
       try {
         await investigate({ discoveryId: id })
+        toast.success('Forensic analysis complete')
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Investigation failed')
+        const msg = e instanceof Error ? e.message : 'Investigation failed'
+        setError(msg)
+        toast.error(msg)
       } finally {
         setWorking((p) => ({ ...p, [id]: false }))
       }
@@ -136,9 +142,12 @@ export default function Discoveries() {
           discoveryId: id,
           title: `Case: ${discovery.title ?? discovery.canonicalUrl}`,
         })
+        toast.success('Case created')
         navigate(`/cases/${caseId}`)
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to create case')
+        const msg = e instanceof Error ? e.message : 'Failed to create case'
+        setError(msg)
+        toast.error(msg)
       } finally {
         setWorking((p) => ({ ...p, [id]: false }))
       }
@@ -146,9 +155,12 @@ export default function Discoveries() {
     }
     setWorking((p) => ({ ...p, [id]: true }))
     try {
-      await review({ discoveryId: id, action, reason })
+      const res = await review({ discoveryId: id, action, reason })
+      toast.success(`Moved to ${res.status.replace(/_/g, ' ')}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Review failed')
+      const msg = e instanceof Error ? e.message : 'Review failed'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setWorking((p) => ({ ...p, [id]: false }))
     }
@@ -157,6 +169,7 @@ export default function Discoveries() {
   const bulk = async (action: 'approve' | 'dismiss' | 'watchlist' | 'allow') => {
     if (selection.size === 0) return
     setError(null)
+    const n = selection.size
     try {
       await bulkReview({
         discoveryIds: [...selection] as Id<'discoveries'>[],
@@ -164,22 +177,29 @@ export default function Discoveries() {
         reason: action === 'dismiss' ? denyReason : undefined,
       })
       setSelection(new Set())
+      toast.success(`${n} ${n === 1 ? 'discovery' : 'discoveries'} ${action}d`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Bulk review failed')
+      const msg = e instanceof Error ? e.message : 'Bulk review failed'
+      setError(msg)
+      toast.error(msg)
     }
   }
 
   const approveAll = async () => {
     setConfirmApproveAll(false)
     setError(null)
+    const n = sorted.length
     try {
       await bulkReview({
         discoveryIds: sorted.map((d) => d._id),
         action: 'approve',
       })
       setSelection(new Set())
+      toast.success(`${n} discoveries approved`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Approve all failed')
+      const msg = e instanceof Error ? e.message : 'Approve all failed'
+      setError(msg)
+      toast.error(msg)
     }
   }
 
@@ -191,14 +211,43 @@ export default function Discoveries() {
     try {
       const runId = await runPatrol({ brandId: brand._id, type: 'brand_name' })
       const queries = [brand.name, `${brand.name} official`, `${brand.name} sale`]
-      await search({ runId, brandId: brand._id, queries })
+      const res = await search({ runId, brandId: brand._id, queries })
       setTab('needs_review')
+      toast.success(`Patrol complete — ${res.discovered} new, ${res.seen} seen`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Patrol failed')
+      const msg = e instanceof Error ? e.message : 'Patrol failed'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setRunning(false)
     }
   }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault()
+        setShowShortcuts(true)
+        return
+      }
+      if (e.key === 'Escape') {
+        setSelection(new Set())
+        return
+      }
+      if (selection.size === 0) return
+      if (e.key === 'a') bulk('approve')
+      else if (e.key === 'd') bulk('dismiss')
+      else if (e.key === 'w') bulk('watchlist')
+      else if (e.key === 'x') toggleAll()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, sorted])
 
   if (brands === undefined || counts === undefined || discoveries === undefined) {
     return <Loading message="Loading discoveries…" />
@@ -359,6 +408,14 @@ export default function Discoveries() {
                   className={`w-3 h-3 transition-transform ${showRuns ? 'rotate-180' : ''}`}
                 />
               </button>
+              <button
+                onClick={() => setShowShortcuts(true)}
+                className="btn-ghost !py-1.5 !px-2 text-xs text-neutral-400"
+                title="Keyboard shortcuts"
+                aria-label="Keyboard shortcuts"
+              >
+                ?
+              </button>
             </div>
           </div>
 
@@ -412,7 +469,6 @@ export default function Discoveries() {
                   ? 'Run a patrol or add a suspect URL to start reviewing discoveries.'
                   : 'Discoveries you move here will appear in this view.'
               }
-              actionTo={tab === 'needs_review' ? undefined : undefined}
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 pb-20">
@@ -472,6 +528,31 @@ export default function Discoveries() {
         onClose={() => setShowAddModal(false)}
         brandId={firstBrand?._id}
       />
+
+      <Modal
+        open={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        title="Keyboard shortcuts"
+        subtitle="Shortcuts apply to the current selection."
+      >
+        <ul className="space-y-2 text-sm">
+          {[
+            ['A', 'Approve selected'],
+            ['D', 'Deny selected (uses the deny reason)'],
+            ['W', 'Watchlist selected'],
+            ['X', 'Toggle select all'],
+            ['Esc', 'Clear selection / close dialogs'],
+            ['?', 'Show this panel'],
+          ].map(([key, label]) => (
+            <li key={key} className="flex items-center gap-3">
+              <kbd className="px-2 py-1 bg-neutral-100 border border-neutral-200 rounded-md text-xs font-mono font-semibold min-w-[32px] text-center">
+                {key}
+              </kbd>
+              <span className="text-neutral-700">{label}</span>
+            </li>
+          ))}
+        </ul>
+      </Modal>
 
       <Modal
         open={confirmApproveAll}

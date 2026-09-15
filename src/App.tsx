@@ -10,12 +10,14 @@ import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
 import Analytics from './pages/Analytics'
 import { WorkspaceProvider } from './lib/workspace'
+import { ToastProvider } from './components/Toasts'
 
 export function AppRoutes() {
   return (
     <WorkspaceProvider>
       <AppShell>
-        <Routes>
+        <ToastProvider>
+          <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/onboarding" element={<Onboarding />} />
@@ -61,7 +63,8 @@ export function AppRoutes() {
             }
           />
           <Route path="*" element={<NotFound />} />
-        </Routes>
+          </Routes>
+        </ToastProvider>
       </AppShell>
     </WorkspaceProvider>
   )

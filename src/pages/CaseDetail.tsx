@@ -22,6 +22,7 @@ import {
 import { api } from '../../convex/_generated/api'
 import type { Doc, Id } from '../../convex/_generated/dataModel'
 import { useWorkspace } from '../lib/workspace'
+import { useToast } from '../components/Toasts'
 import Loading from '../components/Loading'
 import Modal from '../components/Modal'
 import { PlatformChip } from '../components/discoveries/CompareCard'
@@ -270,6 +271,7 @@ export default function CaseDetail() {
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const { organization } = useWorkspace()
+  const toast = useToast()
 
   const c = useQuery(api.cases.get, caseId ? { caseId } : 'skip')
   const evidence = useQuery(api.evidenceItems.listByCase, caseId ? { caseId } : 'skip')
@@ -337,13 +339,16 @@ export default function CaseDetail() {
     return items.sort((a, b) => b.at - a.at)
   }, [auditEvents, rechecks, draft])
 
-  const run = async (key: string, fn: () => Promise<unknown>) => {
+  const run = async (key: string, fn: () => Promise<unknown>, successMsg?: string) => {
     setActionError(null)
     setBusyAction(key)
     try {
       await fn()
+      if (successMsg) toast.success(successMsg)
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Action failed')
+      const msg = e instanceof Error ? e.message : 'Action failed'
+      setActionError(msg)
+      toast.error(msg)
     } finally {
       setBusyAction(null)
     }
@@ -794,7 +799,9 @@ export default function CaseDetail() {
               </div>
 
               <button
-                onClick={() => run('recheck', () => recheck({ caseId: c._id }))}
+                onClick={() =>
+                  run('recheck', () => recheck({ caseId: c._id }), 'Verification complete')
+                }
                 disabled={busyAction === 'recheck'}
                 className="btn-secondary w-full"
               >
@@ -805,12 +812,15 @@ export default function CaseDetail() {
               {watches && watches.length === 0 && (
                 <button
                   onClick={() =>
-                    run('watch', () =>
-                      startWatch({
-                        caseId: c._id,
-                        brandId: c.brandId,
-                        fingerprint: { discoveryId: c.discoveryId },
-                      }),
+                    run(
+                      'watch',
+                      () =>
+                        startWatch({
+                          caseId: c._id,
+                          brandId: c.brandId,
+                          fingerprint: { discoveryId: c.discoveryId },
+                        }),
+                      'Watch started — sweeps run automatically',
                     )
                   }
                   disabled={busyAction === 'watch'}
@@ -822,7 +832,9 @@ export default function CaseDetail() {
 
               {c.state === 'resolved' ? (
                 <button
-                  onClick={() => run('reopen', () => reopen({ caseId: c._id }))}
+                  onClick={() =>
+                    run('reopen', () => reopen({ caseId: c._id }), 'Case reopened')
+                  }
                   disabled={busyAction === 'reopen'}
                   className="btn-secondary w-full"
                 >
@@ -830,7 +842,9 @@ export default function CaseDetail() {
                 </button>
               ) : (
                 <button
-                  onClick={() => run('resolve', () => resolve({ caseId: c._id }))}
+                  onClick={() =>
+                    run('resolve', () => resolve({ caseId: c._id }), 'Case resolved')
+                  }
                   disabled={busyAction === 'resolve'}
                   className="btn-secondary w-full"
                 >
@@ -889,8 +903,10 @@ export default function CaseDetail() {
               onClick={() => {
                 setConfirmSend(false)
                 if (draft && caseId) {
-                  run('send', () =>
-                    approveSend({ caseId, draftId: draft._id, to: to.trim() }),
+                  run(
+                    'send',
+                    () => approveSend({ caseId, draftId: draft._id, to: to.trim() }),
+                    'Notice sent',
                   )
                 }
               }}
