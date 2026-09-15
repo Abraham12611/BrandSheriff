@@ -18,7 +18,7 @@ export default function EmptyState({
       {actionTo && actionLabel && (
         <Link
           to={actionTo}
-          className="inline-flex mt-4 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors"
+          className="btn-primary mt-4"
         >
           {actionLabel}
         </Link>

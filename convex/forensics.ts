@@ -97,6 +97,7 @@ Do not make a legal determination. Use cautious language like "appears", "likely
       identityRisk: Number(analysis.identitySimilarity ?? 0),
       authorizationRisk: Number(analysis.authorizationRisk ?? 0),
       severity: String(analysis.severity ?? "medium"),
+      similarityScore: Number(analysis.identitySimilarity ?? 0),
     });
 
     await ctx.runMutation(internal.evidenceItems.createFromInvestigation, {

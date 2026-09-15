@@ -24,6 +24,7 @@ import type * as http from "../http.js";
 import type * as hydra from "../hydra.js";
 import type * as invitations from "../invitations.js";
 import type * as lib_authz from "../lib/authz.js";
+import type * as lib_platform from "../lib/platform.js";
 import type * as mail from "../mail.js";
 import type * as memberships from "../memberships.js";
 import type * as organizations from "../organizations.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   hydra: typeof hydra;
   invitations: typeof invitations;
   "lib/authz": typeof lib_authz;
+  "lib/platform": typeof lib_platform;
   mail: typeof mail;
   memberships: typeof memberships;
   organizations: typeof organizations;

@@ -30,7 +30,7 @@ export default function Dashboard() {
         </p>
         <Link
           to="/onboarding"
-          className="inline-flex mt-6 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors"
+          className="btn-primary mt-6"
         >
           Set up workspace
         </Link>
@@ -49,14 +49,14 @@ export default function Dashboard() {
               to="/onboarding"
               className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 (brands?.length ?? 0) === 0
-                  ? 'bg-violet-600 text-white hover:bg-violet-700'
+                  ? 'bg-neutral-900 text-white hover:bg-neutral-800'
                   : 'bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
               }`}
             >
               Onboard a brand
             </Link>
             <Link
-              to="/patrols"
+              to="/discoveries"
               className="btn-secondary"
             >
               Run patrol
@@ -89,7 +89,7 @@ export default function Dashboard() {
               Onboard a brand
             </Link>
             <Link
-              to="/patrols"
+              to="/discoveries"
               className="btn-secondary"
             >
               Run patrol
@@ -110,7 +110,7 @@ export default function Dashboard() {
                   href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/northstar/index.html`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm text-violet-600 hover:underline mt-1 block truncate"
+                  className="text-sm text-neutral-700 hover:underline mt-1 block truncate"
                 >
                   Northstar Atelier
                 </a>
@@ -121,7 +121,7 @@ export default function Dashboard() {
                   href={`${import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin}/demo/clone/index.html`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm text-violet-600 hover:underline mt-1 block truncate"
+                  className="text-sm text-neutral-700 hover:underline mt-1 block truncate"
                 >
                   Suspicious clone
                 </a>
@@ -152,7 +152,7 @@ export default function Dashboard() {
           <ul className="divide-y divide-neutral-100">
             {discoveries?.slice(0, 5).map((d) => (
               <li key={d._id} className="px-4 py-3">
-                <Link to="/patrols" className="text-sm font-medium hover:underline block truncate">
+                <Link to="/discoveries" className="text-sm font-medium hover:underline block truncate">
                   {d.title ?? d.canonicalUrl}
                 </Link>
                 <p className="text-xs text-neutral-500 truncate">{d.canonicalUrl}</p>

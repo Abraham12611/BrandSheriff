@@ -125,7 +125,7 @@ export default function CaseDetail() {
                 href={discovery.canonicalUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm text-violet-600 hover:underline block truncate"
+                className="text-sm text-neutral-700 hover:underline block truncate"
               >
                 {discovery.canonicalUrl}
               </a>
@@ -208,7 +208,7 @@ export default function CaseDetail() {
                       href={item.sourceUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-violet-600 hover:underline block truncate"
+                      className="text-xs text-neutral-700 hover:underline block truncate"
                     >
                       {item.sourceUrl}
                     </a>

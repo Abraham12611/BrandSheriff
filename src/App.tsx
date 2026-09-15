@@ -5,7 +5,7 @@ import WorkspaceRequired from './components/WorkspaceRequired'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
 import BrandDNA from './pages/BrandDNA'
-import Patrols from './pages/Patrols'
+import Discoveries from './pages/Discoveries'
 import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
 import { WorkspaceProvider } from './lib/workspace'
@@ -27,13 +27,14 @@ export function AppRoutes() {
             }
           />
           <Route
-            path="/patrols"
+            path="/discoveries"
             element={
               <WorkspaceRequired>
-                <Patrols />
+                <Discoveries />
               </WorkspaceRequired>
             }
           />
+          <Route path="/patrols" element={<Navigate to="/discoveries" replace />} />
           <Route
             path="/cases"
             element={

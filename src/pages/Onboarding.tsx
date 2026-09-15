@@ -102,7 +102,7 @@ export default function Onboarding() {
               setOrganizationId(null)
               setStep('workspace')
             }}
-            className="text-violet-700 hover:text-violet-800 font-medium"
+            className="text-neutral-700 hover:text-neutral-900 font-medium"
           >
             Create a new workspace instead
           </button>

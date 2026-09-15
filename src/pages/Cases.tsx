@@ -35,7 +35,7 @@ export default function Cases() {
             {cases.map((c) => (
               <tr key={c._id} className="border-b border-neutral-100 last:border-0">
                 <td className="px-4 py-3 font-medium">
-                  <Link to={`/cases/${c._id}`} className="text-violet-600 hover:underline">
+                  <Link to={`/cases/${c._id}`} className="text-neutral-700 hover:underline">
                     {c.title}
                   </Link>
                 </td>

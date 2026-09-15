@@ -3,6 +3,7 @@ import { action } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import { assertProviderActionsEnabled } from "./providerSafety";
+import { guessPlatform } from "./lib/platform";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 
@@ -61,6 +62,8 @@ export const runSearch = action({
         title: meta.title ?? "Discovered URL",
         summary: meta.summary,
         status: "needs_review",
+        platformGuess: guessPlatform(url),
+        source: "patrol",
       });
       created++;
     }

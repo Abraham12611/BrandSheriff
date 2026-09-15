@@ -5,6 +5,7 @@ import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import { requireCaseAccess } from "./lib/authz";
 import { assertProviderActionsEnabled } from "./providerSafety";
+import { guessPlatform } from "./lib/platform";
 import type { Doc } from "./_generated/dataModel";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
@@ -54,13 +55,19 @@ export const runWatch = action({
     }
 
     for (const url of foundUrls) {
+      const existing = await ctx.runQuery(internal.discoveries.getByUrl, {
+        organizationId: watch.organizationId,
+        canonicalUrl: url,
+      });
+      if (existing) continue;
       await ctx.runMutation(internal.discoveries.createFromPatrol, {
         organizationId: watch.organizationId,
         brandId: watch.brandId,
-        runId: args.watchId as any,
         canonicalUrl: url,
         title: "Hydra reappearance",
         status: "needs_review",
+        platformGuess: guessPlatform(url),
+        source: "watch",
       });
     }
 

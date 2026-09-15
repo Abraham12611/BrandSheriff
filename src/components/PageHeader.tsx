@@ -19,7 +19,7 @@ export default function PageHeader({
         {backTo && (
           <Link
             to={backTo}
-            className="inline-flex items-center gap-1 text-sm text-violet-600 hover:text-violet-700 hover:underline mb-1"
+            className="inline-flex items-center gap-1 text-sm text-neutral-700 hover:text-neutral-900 hover:underline mb-1"
           >
             ← {backLabel ?? 'Back'}
           </Link>

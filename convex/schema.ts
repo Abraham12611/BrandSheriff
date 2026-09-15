@@ -126,7 +126,16 @@ export default defineSchema({
     matchConfidence: v.optional(v.number()),
     identityRisk: v.optional(v.number()),
     authorizationRisk: v.optional(v.number()),
+    platformGuess: v.optional(v.string()),
+    similarityScore: v.optional(v.number()),
+    estimatedRevenueImpact: v.optional(v.number()),
+    source: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    denialReason: v.optional(v.string()),
+    reviewedBy: v.optional(v.string()),
+    reviewedAt: v.optional(v.number()),
   })
+    .index("by_org", ["organizationId"])
     .index("by_org_status", ["organizationId", "status"])
     .index("by_brand_status", ["brandId", "status"])
     .index("by_url", ["canonicalUrl"]),
@@ -209,11 +218,14 @@ export default defineSchema({
   hydraWatches: defineTable({
     organizationId: v.id("organizations"),
     brandId: v.id("brands"),
-    caseId: v.id("cases"),
+    caseId: v.optional(v.id("cases")),
+    discoveryId: v.optional(v.id("discoveries")),
     fingerprint: v.any(),
     enabled: v.boolean(),
     lastRunAt: v.optional(v.number()),
-  }).index("by_case", ["caseId"]),
+  })
+    .index("by_case", ["caseId"])
+    .index("by_discovery", ["discoveryId"]),
 
   auditEvents: defineTable({
     organizationId: v.id("organizations"),

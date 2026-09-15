@@ -133,7 +133,7 @@ function BrandRow({
             href={brand.canonicalDomain}
             target="_blank"
             rel="noreferrer"
-            className="hover:underline text-violet-600"
+            className="hover:underline text-neutral-700"
           >
             {brand.canonicalDomain}
           </a>
@@ -223,7 +223,7 @@ function BrandAssets({ brandId }: { brandId: Id<'brands'> }) {
                 href={asset.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="block text-xs text-violet-600 hover:underline mt-1 truncate"
+                className="block text-xs text-neutral-700 hover:underline mt-1 truncate"
               >
                 {asset.sourceUrl}
               </a>
@@ -244,7 +244,7 @@ function AssetTypeBadge({ type }: { type: string }) {
   const styles: Record<string, string> = {
     page: 'bg-blue-50 text-blue-700',
     link: 'bg-neutral-100 text-neutral-600',
-    image: 'bg-violet-50 text-violet-700',
+    image: 'bg-neutral-100 text-neutral-700',
     logo: 'bg-amber-50 text-amber-700',
   }
   return (
