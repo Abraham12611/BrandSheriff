@@ -52,6 +52,34 @@ export const create = mutation({
   },
 });
 
+export const setKeywords = mutation({
+  args: { brandId: v.id("brands"), keywords: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    await requireBrandAccess(ctx, args.brandId);
+    const cleaned = [
+      ...new Set(args.keywords.map((k) => k.trim()).filter((k) => k.length > 0)),
+    ].slice(0, 50);
+    await ctx.db.patch("brands", args.brandId, { keywords: cleaned });
+    return cleaned;
+  },
+});
+
+export const setAllowlist = mutation({
+  args: { brandId: v.id("brands"), domains: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    await requireBrandAccess(ctx, args.brandId);
+    const cleaned = [
+      ...new Set(
+        args.domains
+          .map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
+          .filter((d) => d.length > 0),
+      ),
+    ].slice(0, 200);
+    await ctx.db.patch("brands", args.brandId, { allowlist: cleaned });
+    return cleaned;
+  },
+});
+
 export const remove = mutation({
   args: { brandId: v.id("brands") },
   handler: async (ctx, args) => {

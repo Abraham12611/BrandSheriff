@@ -1,6 +1,23 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "./_generated/server";
-import { requireBrandAccess } from "./lib/authz";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type MutationCtx,
+} from "./_generated/server";
+import { ConvexError } from "convex/values";
+import { requireBrandAccess, requireOrganizationMembership } from "./lib/authz";
+import type { Id } from "./_generated/dataModel";
+
+async function requireAssetAccess(ctx: MutationCtx, assetId: Id<"brandAssets">) {
+  const asset = await ctx.db.get("brandAssets", assetId);
+  if (!asset) {
+    throw new ConvexError({ code: "NOT_FOUND", message: "Asset not found." });
+  }
+  const { identity, membership } = await requireOrganizationMembership(ctx, asset.organizationId);
+  return { asset, identity, membership };
+}
 
 export const createFromCrawl = internalMutation({
   args: {
@@ -49,6 +66,56 @@ export const list = query({
       ...a,
       textContent: a.textContent ? a.textContent.slice(0, 500) : a.textContent,
     }));
+  },
+});
+
+export const setMonitor = mutation({
+  args: { assetId: v.id("brandAssets"), enabled: v.boolean() },
+  handler: async (ctx, args) => {
+    await requireAssetAccess(ctx, args.assetId);
+    await ctx.db.patch("brandAssets", args.assetId, { monitorEnabled: args.enabled });
+  },
+});
+
+export const bulkSetMonitor = mutation({
+  args: { assetIds: v.array(v.id("brandAssets")), enabled: v.boolean() },
+  handler: async (ctx, args) => {
+    let updated = 0;
+    for (const assetId of args.assetIds.slice(0, 200)) {
+      try {
+        await requireAssetAccess(ctx, assetId);
+        await ctx.db.patch("brandAssets", assetId, { monitorEnabled: args.enabled });
+        updated++;
+      } catch {
+        // skip assets the caller can't access
+      }
+    }
+    return updated;
+  },
+});
+
+export const remove = mutation({
+  args: { assetId: v.id("brandAssets") },
+  handler: async (ctx, args) => {
+    await requireAssetAccess(ctx, args.assetId);
+    await ctx.db.delete("brandAssets", args.assetId);
+  },
+});
+
+export const bulkRemove = mutation({
+  args: { assetIds: v.array(v.id("brandAssets")) },
+  handler: async (ctx, args) => {
+    let removed = 0;
+    for (const assetId of args.assetIds.slice(0, 200)) {
+      try {
+        await requireAssetAccess(ctx, assetId);
+        await ctx.db.delete("brandAssets", assetId);
+        removed++;
+      } catch {
+        // skip assets the caller can't access
+      }
+    }
+    return removed;
   },
 });
 

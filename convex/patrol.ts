@@ -28,17 +28,29 @@ export const runSearch = action({
     // without excluding the whole host — demo pages share the site origin.
     const canonical = brand.canonicalDomain.replace(/\/$/, "");
     const canonicalDir = canonical.slice(0, canonical.lastIndexOf("/") + 1);
+    const allowlist = new Set((brand.allowlist ?? []).map((d) => d.toLowerCase()));
     const isSelf = (url: string) =>
       url === canonical || (canonicalDir.length > 0 && url.startsWith(canonicalDir));
+    const isAllowed = (url: string) => {
+      try {
+        const host = new URL(url).hostname.toLowerCase();
+        return [...allowlist].some((d) => host === d || host.endsWith(`.${d}`));
+      } catch {
+        return false;
+      }
+    };
+
+    const queries =
+      brand.keywords && brand.keywords.length > 0 ? brand.keywords : args.queries;
 
     const found = new Map<string, { title?: string; summary?: string }>();
-    for (const query of args.queries.slice(0, 5)) {
+    for (const query of queries.slice(0, 8)) {
       try {
         const result = await firecrawl.search(ctx, query, { limit: 10 });
         // The component returns body.data directly; web hits live under `web`.
         const data = (result as { web?: Array<{ url?: string; title?: string; description?: string }> }).web ?? [];
         for (const item of data) {
-          if (item.url && !isSelf(item.url)) {
+          if (item.url && !isSelf(item.url) && !isAllowed(item.url)) {
             found.set(item.url, { title: item.title, summary: item.description });
           }
         }

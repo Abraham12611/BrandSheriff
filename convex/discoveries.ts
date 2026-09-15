@@ -61,6 +61,18 @@ async function applyReview(
     }
   }
 
+  if (action === "allow") {
+    const brand = await ctx.db.get("brands", discovery.brandId);
+    if (brand) {
+      const host = hostOf(discovery.canonicalUrl).toLowerCase();
+      const current = new Set(brand.allowlist ?? []);
+      if (host && !current.has(host)) {
+        current.add(host);
+        await ctx.db.patch("brands", brand._id, { allowlist: [...current] });
+      }
+    }
+  }
+
   await ctx.db.insert("auditEvents", {
     organizationId: discovery.organizationId,
     brandId: discovery.brandId,

@@ -47,7 +47,7 @@ export default function Sidebar() {
     { to: '/cases', label: 'Cases', icon: Briefcase },
   ]
   const brandItems: NavItem[] = [
-    { to: '/brand', label: 'Brand DNA', icon: Fingerprint },
+    { to: '/brand', label: 'Brand Profile', icon: Fingerprint },
   ]
 
   const renderItem = (item: NavItem) => (

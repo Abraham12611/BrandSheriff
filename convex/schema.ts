@@ -75,6 +75,8 @@ export default defineSchema({
     status: v.string(),
     brandDnaStatus: v.string(),
     lastIndexedAt: v.optional(v.number()),
+    keywords: v.optional(v.array(v.string())),
+    allowlist: v.optional(v.array(v.string())),
   })
     .index("by_org", ["organizationId"])
     .index("by_domain", ["canonicalDomain"]),

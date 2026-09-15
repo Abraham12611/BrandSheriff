@@ -4,7 +4,7 @@ import AuthGate from './components/AuthGate'
 import WorkspaceRequired from './components/WorkspaceRequired'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
-import BrandDNA from './pages/BrandDNA'
+import BrandProfile from './pages/BrandProfile'
 import Discoveries from './pages/Discoveries'
 import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
@@ -22,7 +22,7 @@ export function AppRoutes() {
             path="/brand"
             element={
               <WorkspaceRequired>
-                <BrandDNA />
+                <BrandProfile />
               </WorkspaceRequired>
             }
           />
