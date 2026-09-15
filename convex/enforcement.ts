@@ -96,11 +96,17 @@ export const updateDraft = mutation({
   args: {
     draftId: v.id("draftNotices"),
     body: v.string(),
+    subject: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireDraftAccess(ctx, args.draftId);
+    const { draft } = await requireDraftAccess(ctx, args.draftId);
+    const structured =
+      args.subject !== undefined
+        ? { ...(draft.structuredFields as Record<string, unknown> | undefined), subject: args.subject }
+        : draft.structuredFields;
     await ctx.db.patch(args.draftId, {
       body: args.body,
+      structuredFields: structured,
       status: "draft_edited",
       updatedAt: Date.now(),
     });

@@ -9,6 +9,7 @@
  */
 
 import type * as approvals from "../approvals.js";
+import type * as auditEvents from "../auditEvents.js";
 import type * as authzActions from "../authzActions.js";
 import type * as brandAssets from "../brandAssets.js";
 import type * as brandDna from "../brandDna.js";
@@ -44,6 +45,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   approvals: typeof approvals;
+  auditEvents: typeof auditEvents;
   authzActions: typeof authzActions;
   brandAssets: typeof brandAssets;
   brandDna: typeof brandDna;

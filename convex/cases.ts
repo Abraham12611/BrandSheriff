@@ -41,7 +41,7 @@ export const createFromDiscovery = mutation({
     summary: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { discovery } = await requireDiscoveryAccess(ctx, args.discoveryId);
+    const { discovery, identity } = await requireDiscoveryAccess(ctx, args.discoveryId);
 
     const count = await ctx.db.query("cases").collect();
     const caseNumber = `BS-${1000 + count.length}`;
@@ -62,6 +62,19 @@ export const createFromDiscovery = mutation({
       status: "case_created",
     });
 
+    await ctx.db.insert("auditEvents", {
+      organizationId: discovery.organizationId,
+      brandId: discovery.brandId,
+      caseId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "case_created",
+      entityType: "case",
+      entityId: caseId,
+      timestamp: Date.now(),
+      metadataSafe: { title: args.title, caseNumber },
+    });
+
     await ctx.db.insert("evidenceItems", {
       organizationId: discovery.organizationId,
       caseId,
@@ -73,6 +86,52 @@ export const createFromDiscovery = mutation({
     });
 
     return caseId;
+  },
+});
+
+export const resolve = mutation({
+  args: { caseId: v.id("cases") },
+  handler: async (ctx, args) => {
+    const { case: c, identity } = await requireCaseAccess(ctx, args.caseId);
+    await ctx.db.patch("cases", args.caseId, {
+      state: "resolved",
+      resolvedAt: Date.now(),
+    });
+    await ctx.db.insert("auditEvents", {
+      organizationId: c.organizationId,
+      brandId: c.brandId,
+      caseId: args.caseId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "case_resolved",
+      entityType: "case",
+      entityId: args.caseId,
+      timestamp: Date.now(),
+      metadataSafe: { caseNumber: c.caseNumber },
+    });
+  },
+});
+
+export const reopen = mutation({
+  args: { caseId: v.id("cases") },
+  handler: async (ctx, args) => {
+    const { case: c, identity } = await requireCaseAccess(ctx, args.caseId);
+    await ctx.db.patch("cases", args.caseId, {
+      state: "active",
+      resolvedAt: undefined,
+    });
+    await ctx.db.insert("auditEvents", {
+      organizationId: c.organizationId,
+      brandId: c.brandId,
+      caseId: args.caseId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "case_reopened",
+      entityType: "case",
+      entityId: args.caseId,
+      timestamp: Date.now(),
+      metadataSafe: { caseNumber: c.caseNumber },
+    });
   },
 });
 
