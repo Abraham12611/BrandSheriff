@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
-import { listOrganizationIds, requireOrganizationMembership } from "./lib/authz";
+import { listOrganizationIds, requireBrandAccess, requireOrganizationMembership } from "./lib/authz";
 
 export const list = query({
   args: {},
@@ -49,6 +49,35 @@ export const create = mutation({
     });
 
     return brandId;
+  },
+});
+
+export const remove = mutation({
+  args: { brandId: v.id("brands") },
+  handler: async (ctx, args) => {
+    const { brand, identity } = await requireBrandAccess(ctx, args.brandId);
+    await requireOrganizationMembership(ctx, brand.organizationId, ["owner", "admin"]);
+
+    const assets = await ctx.db
+      .query("brandAssets")
+      .withIndex("by_brand", (q) => q.eq("brandId", args.brandId))
+      .collect();
+    for (const asset of assets) {
+      await ctx.db.delete("brandAssets", asset._id);
+    }
+    await ctx.db.delete("brands", args.brandId);
+
+    await ctx.db.insert("auditEvents", {
+      organizationId: brand.organizationId,
+      brandId: args.brandId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "deleted",
+      entityType: "brand",
+      entityId: args.brandId,
+      timestamp: Date.now(),
+      metadataSafe: { name: brand.name },
+    });
   },
 });
 

@@ -52,6 +52,20 @@ export const getById = internalQuery({
   },
 });
 
+export const getByUrl = internalQuery({
+  args: {
+    organizationId: v.id("organizations"),
+    canonicalUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const hit = await ctx.db
+      .query("discoveries")
+      .withIndex("by_url", (q) => q.eq("canonicalUrl", args.canonicalUrl))
+      .first();
+    return hit && hit.organizationId === args.organizationId ? hit : null;
+  },
+});
+
 export const createFromPatrol = internalMutation({
   args: {
     organizationId: v.id("organizations"),
@@ -59,6 +73,7 @@ export const createFromPatrol = internalMutation({
     runId: v.id("patrolRuns"),
     canonicalUrl: v.string(),
     title: v.string(),
+    summary: v.optional(v.string()),
     status: v.string(),
   },
   handler: async (ctx, args) => {
@@ -68,6 +83,7 @@ export const createFromPatrol = internalMutation({
       patrolRunId: args.runId,
       canonicalUrl: args.canonicalUrl,
       title: args.title,
+      summary: args.summary,
       status: args.status,
     });
   },

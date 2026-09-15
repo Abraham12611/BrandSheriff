@@ -118,7 +118,7 @@ export default function CaseDetail() {
               {!draft && (
                 <button
                   onClick={handleGenerate}
-                  title="Generate an editable draft from the case evidence (provider actions are still gated)"
+                  title="Generate an editable draft from the case evidence"
                   className="btn-primary"
                 >
                   Generate draft
@@ -156,7 +156,7 @@ export default function CaseDetail() {
                   </button>
                   <button
                     onClick={handleSend}
-                    title="Approve and send this draft (provider actions are still gated)"
+                    title="Approve and send this draft"
                     className="btn-primary"
                   >
                     Approve & send
@@ -228,7 +228,7 @@ export default function CaseDetail() {
             <div className="px-4 py-3">
               <button
                 onClick={handleStartWatch}
-                title="Watch for reappearance of this case target (provider actions are still gated)"
+                title="Watch for reappearance of this case target"
                 className="btn-primary"
               >
                 Start watching for reappearance
@@ -240,7 +240,7 @@ export default function CaseDetail() {
                   <span className="text-sm">Watch active</span>
                   <button
                     onClick={() => handleRunWatch(w._id)}
-                    title="Run the watch now (provider actions are still gated)"
+                    title="Run the watch now"
                     className="btn-secondary"
                   >
                     Run now
@@ -260,14 +260,14 @@ export default function CaseDetail() {
             <div className="space-y-2">
               <button
                 onClick={handleResolveInbox}
-                title="Fetch the latest AgentMail inbox status (provider actions are still gated)"
+                title="Fetch the latest AgentMail inbox status"
                 className="btn-secondary w-full"
               >
                 Connect AgentMail inbox
               </button>
               <button
                 onClick={handleRecheck}
-                title="Re-check the target page and compare against evidence (provider actions are still gated)"
+                title="Re-check the target page and compare against evidence"
                 className="btn-secondary w-full"
               >
                 Run verification

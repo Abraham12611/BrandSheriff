@@ -17,9 +17,9 @@ npm run build
 
 ## Project state
 
-- The current build is a **read-only prototype** while authentication, multi-tenancy, and approval controls are being implemented.
-- Public Convex mutations and actions fail closed with `PROTOTYPE_READ_ONLY` until those controls land.
-- Demo seeding is not exposed in the main dashboard; the controlled demo storefronts remain under `public/demo/`.
+- Authentication, multi-tenancy, and provider-action controls are implemented.
+- Provider actions (Firecrawl/OpenAI/AgentMail calls) are **off by default per workspace**; an owner/admin enables them via `organizations.enableProviderActions`. The guard lives in `convex/providerSafety.ts` (`assertProviderActionsEnabled`) with membership checks in `convex/authzActions.ts`.
+- Demo seeding is not exposed in the main dashboard; the controlled demo storefronts remain under `public/demo/` and are served at `/demo/<name>/index.html` (exact paths only — the static host has no directory-index resolution).
 - `convex/_generated` is now versioned so CI can build and test without a live `convex dev` codegen step.
 
 ## Phase 1 — Authentication and multi-tenancy
@@ -31,7 +31,7 @@ npm run build
 - `organizations.create` creates a workspace, the caller's user record, and an `owner` membership.
 - Public mutations (create brand, create case, edit draft, start patrol/hydra watch) now check workspace membership.
 - Public queries are scoped to the calling user's workspace memberships.
-- Provider/paid actions remain behind `PROTOTYPE_READ_ONLY` until Phase 3 provider contract work.
+- Provider/paid actions are gated by the workspace `providerActionsEnabled` flag plus membership/role checks (Phase 3).
 
 ### Credentials needed
 

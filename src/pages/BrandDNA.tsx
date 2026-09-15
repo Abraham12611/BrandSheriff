@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useAction } from 'convex/react'
+import { useQuery, useAction, useMutation } from 'convex/react'
 import { Link } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import { useWorkspace } from '../lib/workspace'
@@ -13,9 +13,20 @@ export default function BrandDNA() {
   const { organization, providerActionsEnabled, isAdmin } = useWorkspace()
   const brands = useQuery(api.brands.list)
   const crawl = useAction(api.brandDna.crawl)
+  const removeBrand = useMutation(api.brands.remove)
   const [crawling, setCrawling] = useState<Record<string, boolean>>({})
   const [expandedBrandId, setExpandedBrandId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const handleRemove = async (brand: Doc<'brands'>) => {
+    if (!window.confirm(`Remove ${brand.name} and its captured assets? This cannot be undone.`)) return
+    setError(null)
+    try {
+      await removeBrand({ brandId: brand._id })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove brand')
+    }
+  }
 
   if (brands === undefined) {
     return <Loading message="Loading brands…" />
@@ -73,6 +84,7 @@ export default function BrandDNA() {
                 providerActionsEnabled={providerActionsEnabled}
                 isAdmin={isAdmin}
                 onCrawl={() => handleCrawl(brand)}
+                onRemove={() => handleRemove(brand)}
                 onToggle={() =>
                   setExpandedBrandId((prev) => (prev === brand._id ? null : brand._id))
                 }
@@ -100,6 +112,7 @@ function BrandRow({
   providerActionsEnabled,
   isAdmin,
   onCrawl,
+  onRemove,
   onToggle,
 }: {
   brand: Doc<'brands'>
@@ -108,6 +121,7 @@ function BrandRow({
   providerActionsEnabled: boolean
   isAdmin: boolean
   onCrawl: () => void
+  onRemove: () => void
   onToggle: () => void
 }) {
   return (
@@ -149,6 +163,15 @@ function BrandRow({
             <button onClick={onToggle} className="btn-secondary text-xs">
               {expanded ? 'Hide assets' : 'View assets'}
             </button>
+            {isAdmin && (
+              <button
+                onClick={onRemove}
+                title="Remove this brand and its captured assets"
+                className="text-xs text-rose-600 hover:text-rose-700 px-2"
+              >
+                Remove
+              </button>
+            )}
           </div>
         </td>
       </tr>
