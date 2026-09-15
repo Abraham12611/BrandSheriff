@@ -8,6 +8,7 @@ import BrandProfile from './pages/BrandProfile'
 import Discoveries from './pages/Discoveries'
 import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
+import Analytics from './pages/Analytics'
 import { WorkspaceProvider } from './lib/workspace'
 
 export function AppRoutes() {
@@ -35,6 +36,14 @@ export function AppRoutes() {
             }
           />
           <Route path="/patrols" element={<Navigate to="/discoveries" replace />} />
+          <Route
+            path="/analytics"
+            element={
+              <WorkspaceRequired>
+                <Analytics />
+              </WorkspaceRequired>
+            }
+          />
           <Route
             path="/cases"
             element={

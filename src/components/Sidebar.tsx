@@ -6,6 +6,7 @@ import {
   Fingerprint,
   Radar,
   Briefcase,
+  BarChart3,
   Plus,
   Menu,
   X,
@@ -48,6 +49,9 @@ export default function Sidebar() {
   ]
   const brandItems: NavItem[] = [
     { to: '/brand', label: 'Brand Profile', icon: Fingerprint },
+  ]
+  const dataItems: NavItem[] = [
+    { to: '/analytics', label: 'Analytics', icon: BarChart3 },
   ]
 
   const renderItem = (item: NavItem) => (
@@ -119,6 +123,7 @@ export default function Sidebar() {
           <NavSection>{mainItems.map(renderItem)}</NavSection>
           <NavSection label="Activity">{activityItems.map(renderItem)}</NavSection>
           <NavSection label="Brand">{brandItems.map(renderItem)}</NavSection>
+          <NavSection label="Data">{dataItems.map(renderItem)}</NavSection>
         </nav>
 
         <div className="p-3 border-t border-neutral-800/60">
