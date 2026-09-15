@@ -9,3 +9,6 @@ dist
 .devin/docs/
 convex/_generated/ai
 
+
+# reference material (kept locally, not committed)
+bustem-ref/
