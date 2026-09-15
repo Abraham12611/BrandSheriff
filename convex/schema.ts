@@ -154,6 +154,7 @@ export default defineSchema({
     primaryThreatType: v.optional(v.string()),
     resolvedAt: v.optional(v.number()),
   })
+    .index("by_org", ["organizationId"])
     .index("by_org_state", ["organizationId", "state"])
     .index("by_brand_state", ["brandId", "state"])
     .index("by_case_number", ["caseNumber"]),

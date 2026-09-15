@@ -18,6 +18,43 @@ export const listByState = query({
   },
 });
 
+export const listForOrg = query({
+  args: { state: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const { organizationIds } = await listOrganizationIds(ctx);
+    const all = [];
+    for (const orgId of organizationIds) {
+      const rows = await ctx.db
+        .query("cases")
+        .withIndex("by_org", (q) => q.eq("organizationId", orgId))
+        .collect();
+      all.push(...rows);
+    }
+    return all
+      .filter((c) => !args.state || c.state === args.state)
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .slice(0, 200);
+  },
+});
+
+export const countsByState = query({
+  args: {},
+  handler: async (ctx) => {
+    const { organizationIds } = await listOrganizationIds(ctx);
+    const counts: Record<string, number> = {};
+    for (const orgId of organizationIds) {
+      const rows = await ctx.db
+        .query("cases")
+        .withIndex("by_org", (q) => q.eq("organizationId", orgId))
+        .collect();
+      for (const c of rows) {
+        counts[c.state] = (counts[c.state] ?? 0) + 1;
+      }
+    }
+    return counts;
+  },
+});
+
 export const get = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
