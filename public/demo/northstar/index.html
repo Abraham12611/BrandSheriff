@@ -24,6 +24,7 @@
     .section-sub { color:var(--muted); font-size:14px; margin:0 0 28px; }
     .grid { display:grid; gap:24px; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
     .card { background:#fff; border:1px solid var(--line); }
+    .card img.product { width:100%; height:190px; object-fit:cover; display:block; background:#f0ede7; }
     .card .ph { height:190px; background:linear-gradient(135deg,#ddd8cf,#c9c2b4); display:flex; align-items:center; justify-content:center; color:#8d8574; font-size:12px; letter-spacing:.15em; text-transform:uppercase; }
     .card .body { padding:18px; }
     .card h3 { margin:0 0 6px; font-size:17px; font-weight:normal; }
@@ -32,6 +33,7 @@
     .rating { color:var(--accent); font-size:12px; letter-spacing:.05em; }
     .story { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center; margin:64px 0; padding:48px; background:#fff; border:1px solid var(--line); }
     .story .ph { height:240px; background:linear-gradient(135deg,#d8d2c6,#bdb4a2); }
+    .story img { width:100%; height:280px; object-fit:cover; display:block; }
     .story p { color:var(--muted); line-height:1.7; font-size:15px; }
     .trust { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin:56px 0; text-align:center; }
     .trust div { padding:24px; background:#fff; border:1px solid var(--line); font-size:13px; color:var(--muted); line-height:1.6; }
@@ -73,7 +75,7 @@
       <p class="section-sub">Every piece is designed to work together — and to outlast the journey.</p>
       <div class="grid">
         <article class="card">
-          <div class="ph">Meridian Carry-On</div>
+          <img class="product" src="img/carryon.jpg" alt="Meridian Carry-On" loading="lazy" />
           <div class="body">
             <h3>Meridian Carry-On</h3>
             <p>Ultralight 38L carry-on in aerospace-grade polycarbonate. Fits overhead on every major airline.</p>
@@ -82,7 +84,7 @@
           </div>
         </article>
         <article class="card">
-          <div class="ph">Atlas Sling</div>
+          <img class="product" src="img/sling.jpg" alt="Atlas Sling" loading="lazy" />
           <div class="body">
             <h3>Atlas Sling</h3>
             <p>Compact 4L crossbody for essentials on the go. RFID-safe pocket, weatherproof zip.</p>
@@ -91,7 +93,7 @@
           </div>
         </article>
         <article class="card">
-          <div class="ph">Horizon Tech Pouch</div>
+          <img class="product" src="img/pouch.jpg" alt="Horizon Tech Pouch" loading="lazy" />
           <div class="body">
             <h3>Horizon Tech Pouch</h3>
             <p>Cable organizer that fits any bag. Twelve labeled compartments for chargers and adapters.</p>
@@ -100,7 +102,7 @@
           </div>
         </article>
         <article class="card">
-          <div class="ph">Voyager Duffel</div>
+          <img class="product" src="img/duffel.jpg" alt="Voyager Duffel" loading="lazy" />
           <div class="body">
             <h3>Voyager Duffel</h3>
             <p>45L weekender with a separate shoe garage and a sleeve that slides over the Meridian handle.</p>
@@ -109,7 +111,7 @@
           </div>
         </article>
         <article class="card">
-          <div class="ph">Compass Wallet</div>
+          <img class="product" src="img/wallet.jpg" alt="Compass Wallet" loading="lazy" />
           <div class="body">
             <h3>Compass Wallet</h3>
             <p>Slim passport wallet in full-grain leather with boarding-pass slot and SIM ejector tool.</p>
@@ -118,7 +120,7 @@
           </div>
         </article>
         <article class="card">
-          <div class="ph">Drift Packing Cubes</div>
+          <img class="product" src="img/cubes.jpg" alt="Drift Packing Cubes" loading="lazy" />
           <div class="body">
             <h3>Drift Packing Cubes</h3>
             <p>Set of three compression cubes sized to the Meridian interior. Recycled ripstop nylon.</p>
@@ -130,7 +132,7 @@
     </section>
 
     <section class="story" id="story">
-      <div class="ph"></div>
+      <img src="img/duffel.jpg" alt="Traveler carrying the Voyager Duffel" loading="lazy" />
       <div>
         <h2>Built for the long haul</h2>
         <p>Northstar Atelier was founded in 2019 by two former aerospace engineers who were tired of replacing luggage every year. Every product is prototyped in our Portland studio, tested through 250,000 wheel cycles, and backed by a lifetime repair program.</p>

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
+import { requireBrandAccess } from "./lib/authz";
 
 export const createFromCrawl = internalMutation({
   args: {
@@ -33,6 +34,21 @@ export const createFromCrawl = internalMutation({
         monitorEnabled: false,
       });
     }
+  },
+});
+
+export const list = query({
+  args: { brandId: v.id("brands") },
+  handler: async (ctx, args) => {
+    await requireBrandAccess(ctx, args.brandId);
+    const assets = await ctx.db
+      .query("brandAssets")
+      .withIndex("by_brand", (q) => q.eq("brandId", args.brandId))
+      .collect();
+    return assets.map((a) => ({
+      ...a,
+      textContent: a.textContent ? a.textContent.slice(0, 500) : a.textContent,
+    }));
   },
 });
 

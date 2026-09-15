@@ -17,7 +17,7 @@
     main { max-width:1000px; margin:0 auto; padding:40px 24px; }
     .grid { display:grid; gap:20px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
     .card { border:1px solid #e3e3e3; }
-    .card .ph { height:150px; background:#ddd; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; }
+    .card img.product { width:100%; height:150px; object-fit:cover; display:block; background:#eee; }
     .card .body { padding:14px; }
     .card h3 { margin:0 0 6px; font-size:16px; }
     .card p { margin:0 0 8px; color:#777; font-size:13px; }
@@ -43,7 +43,7 @@
   <main id="deals">
     <div class="grid">
       <article class="card">
-        <div class="ph">product photo</div>
+        <img class="product" src="../northstar/img/carryon.jpg" alt="Meridian Carry-On" />
         <div class="body">
           <span class="badge">65% OFF</span>
           <h3>Meridian Carry-On</h3>
@@ -52,7 +52,7 @@
         </div>
       </article>
       <article class="card">
-        <div class="ph">product photo</div>
+        <img class="product" src="../northstar/img/sling.jpg" alt="Atlas Sling" />
         <div class="body">
           <span class="badge">66% OFF</span>
           <h3>Atlas Sling</h3>
@@ -61,7 +61,7 @@
         </div>
       </article>
       <article class="card">
-        <div class="ph">product photo</div>
+        <img class="product" src="../northstar/img/pouch.jpg" alt="Horizon Tech Pouch" />
         <div class="body">
           <span class="badge">66% OFF</span>
           <h3>Horizon Tech Pouch</h3>
@@ -70,7 +70,7 @@
         </div>
       </article>
       <article class="card">
-        <div class="ph">product photo</div>
+        <img class="product" src="../northstar/img/duffel.jpg" alt="Voyager Duffel" />
         <div class="body">
           <span class="badge">60% OFF</span>
           <h3>Voyager Duffel</h3>
