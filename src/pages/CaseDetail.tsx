@@ -10,6 +10,9 @@ import Loading from '../components/Loading'
 export default function CaseDetail() {
   const { id } = useParams<{ id: string }>()
   const [to, setTo] = useState('abuse@example.com')
+  const [inboxError, setInboxError] = useState<string | null>(null)
+  const [manualInbox, setManualInbox] = useState('')
+  const [inboxBusy, setInboxBusy] = useState(false)
   const { organization } = useWorkspace()
   const c = useQuery(api.cases.get, id ? ({ caseId: id as any } as { caseId: Id<'cases'> }) : 'skip')
   const evidence = useQuery(
@@ -29,6 +32,7 @@ export default function CaseDetail() {
   const update = useMutation(api.enforcement.updateDraft)
   const approveSend = useAction(api.enforcement.approveAndSend)
   const resolveInbox = useAction(api.mail.resolveInbox)
+  const connectManual = useAction(api.mail.connectInboxManual)
   const recheck = useAction(api.verification.recheckTarget)
   const rechecks = useQuery(api.verification.list, id ? ({ caseId: id as any } as { caseId: Id<'cases'> }) : 'skip')
   const startWatch = useMutation(api.hydra.startWatch)
@@ -59,7 +63,29 @@ export default function CaseDetail() {
 
   const handleResolveInbox = async () => {
     if (!organization) return
-    await resolveInbox({ organizationId: organization._id })
+    setInboxError(null)
+    setInboxBusy(true)
+    try {
+      await resolveInbox({ organizationId: organization._id })
+    } catch (e) {
+      setInboxError(e instanceof Error ? e.message : 'Failed to resolve AgentMail inbox')
+    } finally {
+      setInboxBusy(false)
+    }
+  }
+
+  const handleConnectManual = async () => {
+    if (!organization || !manualInbox.trim()) return
+    setInboxError(null)
+    setInboxBusy(true)
+    try {
+      await connectManual({ organizationId: organization._id, inboxAddress: manualInbox.trim() })
+      setManualInbox('')
+    } catch (e) {
+      setInboxError(e instanceof Error ? e.message : 'Failed to connect inbox')
+    } finally {
+      setInboxBusy(false)
+    }
   }
 
   const handleStartWatch = async () => {
@@ -260,11 +286,37 @@ export default function CaseDetail() {
             <div className="space-y-2">
               <button
                 onClick={handleResolveInbox}
+                disabled={inboxBusy}
                 title="Fetch the latest AgentMail inbox status"
                 className="btn-secondary w-full"
               >
-                Connect AgentMail inbox
+                {inboxBusy ? 'Connecting…' : 'Connect AgentMail inbox'}
               </button>
+              {organization?.mailboxAddress && (
+                <p className="text-xs text-emerald-700">
+                  Connected: {organization.mailboxAddress}
+                </p>
+              )}
+              {inboxError && (
+                <p className="text-xs text-rose-700">{inboxError}</p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  value={manualInbox}
+                  onChange={(e) => setManualInbox(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-xs"
+                  placeholder="inbox@yourorg.agentmail.to"
+                  aria-label="AgentMail inbox address"
+                />
+                <button
+                  onClick={handleConnectManual}
+                  disabled={inboxBusy || !manualInbox.trim()}
+                  title="Connect a specific AgentMail inbox address (works with inbox-scoped API keys)"
+                  className="btn-secondary text-xs"
+                >
+                  Set
+                </button>
+              </div>
               <button
                 onClick={handleRecheck}
                 title="Re-check the target page and compare against evidence"

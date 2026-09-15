@@ -4,7 +4,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**', 'convex/_generated/**', 'convex/schema.js', 'public/**', '.agents/**', '.claude/**', '.convex/**', '.devin/**'] },
+  { ignores: ['dist/**', 'node_modules/**', 'convex/_generated/**', 'convex/schema.js', 'public/**', '.agents/**', '.claude/**', '.convex/**', '.devin/**', 'components/**/_generated/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
