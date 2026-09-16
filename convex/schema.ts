@@ -245,6 +245,17 @@ export default defineSchema({
     .index("by_org_time", ["organizationId", "timestamp"])
     .index("by_case_time", ["caseId", "timestamp"]),
 
+  scanResults: defineTable({
+    domain: v.string(),
+    token: v.string(),
+    sourceUrl: v.string(),
+    scannedBrand: v.optional(v.string()),
+    suspects: v.array(v.any()),
+    scannedAt: v.number(),
+  })
+    .index("by_domain", ["domain"])
+    .index("by_token", ["token"]),
+
   reports: defineTable({
     organizationId: v.id("organizations"),
     brandId: v.optional(v.id("brands")),

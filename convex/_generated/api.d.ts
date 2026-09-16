@@ -37,6 +37,7 @@ import type * as patrolRuns from "../patrolRuns.js";
 import type * as providerSafety from "../providerSafety.js";
 import type * as rechecks from "../rechecks.js";
 import type * as reports from "../reports.js";
+import type * as scans from "../scans.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
 import type * as verification from "../verification.js";
@@ -77,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   providerSafety: typeof providerSafety;
   rechecks: typeof rechecks;
   reports: typeof reports;
+  scans: typeof scans;
   seed: typeof seed;
   users: typeof users;
   verification: typeof verification;

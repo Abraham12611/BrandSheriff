@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App, { AppRoutes } from './App'
+import AuthGate from './components/AuthGate'
 
 const mockAuth = vi.hoisted(() => ({
   isAuthenticated: true,
@@ -29,6 +30,8 @@ vi.mock('@clerk/react', () => ({
     membership: null,
   })),
   SignIn: () => <div data-testid="clerk-sign-in">Sign in</div>,
+  SignInButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SignUpButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   UserButton: () => <div data-testid="clerk-user-button">User</div>,
 }))
 
@@ -77,10 +80,25 @@ describe('authenticated navigation and safety disclosure', () => {
     expect(submit).not.toBeDisabled()
   })
 
-  it('gates the app behind authentication when signed out', () => {
+  it('shows the public scan landing to signed-out visitors', () => {
     mockAuth.isAuthenticated = false
     render(<App />)
+    expect(
+      screen.getByRole('heading', { name: /who's copying your brand/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('yourstore.com')).toBeInTheDocument()
+  })
+
+  it('gates the app behind authentication when signed out', () => {
+    mockAuth.isAuthenticated = false
+    render(
+      <MemoryRouter>
+        <AuthGate>
+          <div data-testid="protected-app">app</div>
+        </AuthGate>
+      </MemoryRouter>,
+    )
     expect(screen.getByTestId('clerk-sign-in')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Set up workspace' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('protected-app')).not.toBeInTheDocument()
   })
 })
