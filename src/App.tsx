@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from 'react-router-dom'
 import AppShell from './components/AppShell'
 import AuthGate from './components/AuthGate'
 import WorkspaceRequired from './components/WorkspaceRequired'
@@ -9,63 +9,81 @@ import Discoveries from './pages/Discoveries'
 import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
 import Analytics from './pages/Analytics'
+import Reports from './pages/Reports'
+import ReportView from './pages/ReportView'
 import { WorkspaceProvider } from './lib/workspace'
 import { ToastProvider } from './components/Toasts'
+
+function ShellLayout() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  )
+}
 
 export function AppRoutes() {
   return (
     <WorkspaceProvider>
-      <AppShell>
-        <ToastProvider>
-          <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route
-            path="/brand"
-            element={
-              <WorkspaceRequired>
-                <BrandProfile />
-              </WorkspaceRequired>
-            }
-          />
-          <Route
-            path="/discoveries"
-            element={
-              <WorkspaceRequired>
-                <Discoveries />
-              </WorkspaceRequired>
-            }
-          />
-          <Route path="/patrols" element={<Navigate to="/discoveries" replace />} />
-          <Route
-            path="/analytics"
-            element={
-              <WorkspaceRequired>
-                <Analytics />
-              </WorkspaceRequired>
-            }
-          />
-          <Route
-            path="/cases"
-            element={
-              <WorkspaceRequired>
-                <Cases />
-              </WorkspaceRequired>
-            }
-          />
-          <Route
-            path="/cases/:id"
-            element={
-              <WorkspaceRequired>
-                <CaseDetail />
-              </WorkspaceRequired>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-          </Routes>
-        </ToastProvider>
-      </AppShell>
+      <ToastProvider>
+        <Routes>
+          <Route element={<ShellLayout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route
+              path="/brand"
+              element={
+                <WorkspaceRequired>
+                  <BrandProfile />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/discoveries"
+              element={
+                <WorkspaceRequired>
+                  <Discoveries />
+                </WorkspaceRequired>
+              }
+            />
+            <Route path="/patrols" element={<Navigate to="/discoveries" replace />} />
+            <Route
+              path="/analytics"
+              element={
+                <WorkspaceRequired>
+                  <Analytics />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <WorkspaceRequired>
+                  <Reports />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/cases"
+              element={
+                <WorkspaceRequired>
+                  <Cases />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/cases/:id"
+              element={
+                <WorkspaceRequired>
+                  <CaseDetail />
+                </WorkspaceRequired>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </ToastProvider>
     </WorkspaceProvider>
   )
 }
@@ -73,9 +91,18 @@ export function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthGate>
-        <AppRoutes />
-      </AuthGate>
+      <Routes>
+        {/* Public share-link view — no auth, no app shell */}
+        <Route path="/report/:token" element={<ReportView />} />
+        <Route
+          path="/*"
+          element={
+            <AuthGate>
+              <AppRoutes />
+            </AuthGate>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   )
 }

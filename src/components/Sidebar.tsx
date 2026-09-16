@@ -7,6 +7,7 @@ import {
   Radar,
   Briefcase,
   BarChart3,
+  FileText,
   Plus,
   Menu,
   X,
@@ -52,6 +53,7 @@ export default function Sidebar() {
   ]
   const dataItems: NavItem[] = [
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/reports', label: 'Reports', icon: FileText },
   ]
 
   const renderItem = (item: NavItem) => (

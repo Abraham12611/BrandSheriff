@@ -244,4 +244,21 @@ export default defineSchema({
   })
     .index("by_org_time", ["organizationId", "timestamp"])
     .index("by_case_time", ["caseId", "timestamp"]),
+
+  reports: defineTable({
+    organizationId: v.id("organizations"),
+    brandId: v.optional(v.id("brands")),
+    title: v.string(),
+    rangeFrom: v.number(),
+    rangeTo: v.number(),
+    sections: v.array(v.string()),
+    snapshot: v.any(),
+    token: v.string(),
+    createdBy: v.string(),
+    createdByName: v.optional(v.string()),
+    createdAt: v.number(),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_org", ["organizationId"])
+    .index("by_token", ["token"]),
 });
