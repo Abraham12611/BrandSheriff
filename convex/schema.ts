@@ -15,7 +15,8 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   })
     .index("by_slug", ["slug"])
-    .index("by_owner", ["ownerUserId"]),
+    .index("by_owner", ["ownerUserId"])
+    .index("by_mailbox", ["mailboxId"]),
 
   users: defineTable({
     clerkId: v.string(),
@@ -186,11 +187,15 @@ export default defineSchema({
     readiness: v.optional(v.string()),
     warnings: v.optional(v.array(v.string())),
     outboundId: v.optional(v.string()),
+    threadId: v.optional(v.string()),
+    sentTo: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_case", ["caseId"])
-    .index("by_outbound", ["outboundId"]),
+    .index("by_outbound", ["outboundId"])
+    .index("by_thread", ["threadId"]),
 
   approvals: defineTable({
     organizationId: v.id("organizations"),
@@ -244,6 +249,36 @@ export default defineSchema({
   })
     .index("by_org_time", ["organizationId", "timestamp"])
     .index("by_case_time", ["caseId", "timestamp"]),
+
+  caseMessages: defineTable({
+    organizationId: v.id("organizations"),
+    caseId: v.optional(v.id("cases")),
+    threadId: v.optional(v.string()),
+    messageId: v.optional(v.string()),
+    direction: v.string(),
+    fromAddr: v.string(),
+    toAddrs: v.array(v.string()),
+    subject: v.optional(v.string()),
+    text: v.optional(v.string()),
+    preview: v.optional(v.string()),
+    classification: v.optional(v.string()),
+    eventId: v.optional(v.string()),
+    receivedAt: v.number(),
+    readAt: v.optional(v.number()),
+  })
+    .index("by_case", ["caseId"])
+    .index("by_org", ["organizationId"]),
+
+  notifications: defineTable({
+    organizationId: v.id("organizations"),
+    type: v.string(),
+    title: v.string(),
+    body: v.optional(v.string()),
+    caseId: v.optional(v.id("cases")),
+    href: v.optional(v.string()),
+    createdAt: v.number(),
+    readAt: v.optional(v.number()),
+  }).index("by_org", ["organizationId"]),
 
   scanResults: defineTable({
     domain: v.string(),

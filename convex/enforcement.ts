@@ -157,6 +157,7 @@ export const approveAndSend = action({
     await ctx.runMutation(internal.draftNotices.markSent, {
       draftId: args.draftId,
       outboundId,
+      to: args.to,
     });
 
     return { outboundId };

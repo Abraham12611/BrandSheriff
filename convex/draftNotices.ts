@@ -51,12 +51,35 @@ export const markSent = internalMutation({
   args: {
     draftId: v.id("draftNotices"),
     outboundId: v.optional(v.string()),
+    to: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.draftId, {
+    const draft = await ctx.db.get("draftNotices", args.draftId);
+    if (!draft) return;
+    await ctx.db.patch("draftNotices", args.draftId, {
       status: "sent",
       outboundId: args.outboundId,
+      sentTo: args.to,
+      sentAt: Date.now(),
       updatedAt: Date.now(),
     });
+    // Record the outbound side of the thread so replies render in context.
+    if (args.to) {
+      const subject =
+        (draft.structuredFields as { subject?: string } | undefined)?.subject ??
+        "Brand enforcement notice";
+      await ctx.db.insert("caseMessages", {
+        organizationId: draft.organizationId,
+        caseId: draft.caseId,
+        direction: "out",
+        fromAddr: "workspace",
+        toAddrs: [args.to],
+        subject,
+        text: draft.body,
+        preview: (draft.body ?? "").slice(0, 200),
+        receivedAt: Date.now(),
+        readAt: Date.now(),
+      });
+    }
   },
 });

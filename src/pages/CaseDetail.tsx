@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import {
@@ -287,6 +287,14 @@ export default function CaseDetail() {
   const rechecks = useQuery(api.verification.list, caseId ? { caseId } : 'skip')
   const watches = useQuery(api.hydra.list, caseId ? { caseId } : 'skip')
   const auditEvents = useQuery(api.auditEvents.listByCase, caseId ? { caseId } : 'skip')
+  const messages = useQuery(api.mailInbound.listByCase, caseId ? { caseId } : 'skip')
+  const markReadForCase = useMutation(api.mailInbound.markReadForCase)
+
+  useEffect(() => {
+    if (tab === 'enforcement' && caseId && messages?.some((m) => m.direction === 'in' && !m.readAt)) {
+      markReadForCase({ caseId })
+    }
+  }, [tab, caseId, messages, markReadForCase])
 
   const generate = useAction(api.enforcement.generateDraft)
   const update = useMutation(api.enforcement.updateDraft)
@@ -689,6 +697,86 @@ export default function CaseDetail() {
                     </button>
                   </div>
                 )}
+              </section>
+
+              <section className="app-panel overflow-hidden">
+                <div className="px-4 py-3 border-b border-neutral-100 font-medium text-sm flex items-center justify-between">
+                  <span>Communication</span>
+                  {(messages?.filter((m) => m.direction === 'in' && !m.readAt).length ?? 0) > 0 && (
+                    <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
+                      {messages!.filter((m) => m.direction === 'in' && !m.readAt).length} unread
+                    </span>
+                  )}
+                </div>
+                <ul className="divide-y divide-neutral-50">
+                  {messages
+                    ?.slice()
+                    .sort((a, b) => a.receivedAt - b.receivedAt)
+                    .map((m) => (
+                      <li key={m._id} className="px-4 py-3.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                                m.direction === 'in' ? 'bg-blue-50 text-blue-600' : 'bg-neutral-100 text-neutral-500'
+                              }`}
+                            >
+                              {m.direction === 'in' ? (
+                                <Mail className="w-3 h-3" />
+                              ) : (
+                                <Send className="w-3 h-3" />
+                              )}
+                            </span>
+                            <span className="text-xs font-medium text-neutral-800 truncate">
+                              {m.direction === 'in' ? `From ${m.fromAddr}` : `To ${m.toAddrs.join(', ')}`}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {m.direction === 'in' && m.classification && (
+                              <Badge
+                                label={
+                                  m.classification === 'auto_reply'
+                                    ? 'Auto-reply'
+                                    : m.classification === 'possible_compliance'
+                                      ? 'Possible compliance'
+                                      : 'Needs reading'
+                                }
+                                tone={
+                                  m.classification === 'possible_compliance'
+                                    ? STATE_STYLE.resolved
+                                    : m.classification === 'auto_reply'
+                                      ? 'bg-neutral-100 text-neutral-600'
+                                      : STATE_STYLE.reviewing
+                                }
+                              />
+                            )}
+                            {m.direction === 'in' && !m.readAt && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Unread" />
+                            )}
+                          </div>
+                        </div>
+                        {m.subject && (
+                          <p className="text-xs font-medium text-neutral-700 mt-1.5">{m.subject}</p>
+                        )}
+                        <p className="text-xs text-neutral-600 mt-1 whitespace-pre-wrap leading-relaxed">
+                          {m.text ?? m.preview ?? ''}
+                        </p>
+                        <p className="text-[11px] text-neutral-400 mt-1.5">
+                          {new Date(m.receivedAt).toLocaleString()}
+                          {m.direction === 'in' && m.classification && (
+                            <span className="ml-1">
+                              · machine label — read the message before acting on it
+                            </span>
+                          )}
+                        </p>
+                      </li>
+                    ))}
+                  {(messages?.length ?? 0) === 0 && (
+                    <li className="px-4 py-8 text-center text-sm text-neutral-500">
+                      No messages yet — sent notices and replies appear here.
+                    </li>
+                  )}
+                </ul>
               </section>
 
               <section className="app-panel overflow-hidden">
