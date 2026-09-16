@@ -16,6 +16,7 @@ import type * as brandAssets from "../brandAssets.js";
 import type * as brandDna from "../brandDna.js";
 import type * as brands from "../brands.js";
 import type * as cases from "../cases.js";
+import type * as contactResearch from "../contactResearch.js";
 import type * as crons from "../crons.js";
 import type * as discoveries from "../discoveries.js";
 import type * as domainVerifications from "../domainVerifications.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   brandDna: typeof brandDna;
   brands: typeof brands;
   cases: typeof cases;
+  contactResearch: typeof contactResearch;
   crons: typeof crons;
   discoveries: typeof discoveries;
   domainVerifications: typeof domainVerifications;

@@ -29,6 +29,13 @@ import { PlatformChip } from '../components/discoveries/CompareCard'
 
 type TabKey = 'details' | 'activity' | 'enforcement'
 
+type ContactRoute = {
+  type: 'site_email' | 'contact_page' | 'registrar_abuse' | 'platform_report'
+  label: string
+  value: string
+  source: string
+}
+
 const STATE_STYLE: Record<string, string> = {
   active: 'bg-amber-50 text-amber-700',
   reviewing: 'bg-blue-50 text-blue-700',
@@ -298,6 +305,7 @@ export default function CaseDetail() {
 
   const generate = useAction(api.enforcement.generateDraft)
   const update = useMutation(api.enforcement.updateDraft)
+  const research = useAction(api.contactResearch.research)
   const approveSend = useAction(api.enforcement.approveAndSend)
   const resolveInbox = useAction(api.mail.resolveInbox)
   const connectManual = useAction(api.mail.connectInboxManual)
@@ -606,9 +614,31 @@ export default function CaseDetail() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="recipient" className="text-xs text-neutral-500">
-                          Recipient
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label htmlFor="recipient" className="text-xs text-neutral-500">
+                            Recipient
+                          </label>
+                          <button
+                            onClick={() =>
+                              run(
+                                'research',
+                                () => research({ caseId: c._id }),
+                                'Contact routes researched',
+                              )
+                            }
+                            disabled={busyAction !== null}
+                            className="text-[11px] font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1"
+                            title="Scrape the target page and query public registry data for abuse contacts — calls Firecrawl"
+                          >
+                            {busyAction === 'research' ? (
+                              'Researching…'
+                            ) : (
+                              <>
+                                <Search className="w-3 h-3" /> Find contact routes
+                              </>
+                            )}
+                          </button>
+                        </div>
                         <input
                           id="recipient"
                           value={to}
@@ -636,6 +666,40 @@ export default function CaseDetail() {
                         />
                       </div>
                     </div>
+                    {Array.isArray(c.contactRoutes) && c.contactRoutes.length > 0 && (
+                      <div className="rounded-lg border border-neutral-200 divide-y divide-neutral-100">
+                        {(c.contactRoutes as ContactRoute[]).map((r, i) => (
+                          <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-neutral-800 truncate">
+                                {r.label}
+                              </p>
+                              <p className="text-[11px] text-neutral-500 truncate">
+                                {r.value} · {r.source}
+                              </p>
+                            </div>
+                            {r.type === 'site_email' || r.type === 'registrar_abuse' ? (
+                              <button
+                                onClick={() => setTo(r.value)}
+                                className="btn-ghost text-[11px] shrink-0"
+                                title="Use as recipient"
+                              >
+                                Use
+                              </button>
+                            ) : (
+                              <a
+                                href={r.value}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn-ghost text-[11px] shrink-0"
+                              >
+                                <ExternalLink className="w-3 h-3" /> Open
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div>
                       <label htmlFor="draftBody" className="text-xs text-neutral-500">
                         Body
