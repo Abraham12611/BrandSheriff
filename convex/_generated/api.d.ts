@@ -28,6 +28,7 @@ import type * as files from "../files.js";
 import type * as forensics from "../forensics.js";
 import type * as http from "../http.js";
 import type * as hydra from "../hydra.js";
+import type * as interact from "../interact.js";
 import type * as invitations from "../invitations.js";
 import type * as lib_agentmailApi from "../lib/agentmailApi.js";
 import type * as lib_authz from "../lib/authz.js";
@@ -80,6 +81,7 @@ declare const fullApi: ApiFromModules<{
   forensics: typeof forensics;
   http: typeof http;
   hydra: typeof hydra;
+  interact: typeof interact;
   invitations: typeof invitations;
   "lib/agentmailApi": typeof lib_agentmailApi;
   "lib/authz": typeof lib_authz;

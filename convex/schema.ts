@@ -163,6 +163,10 @@ export default defineSchema({
     enforcementWorkflowId: v.optional(v.string()),
     enforcementWorkflowStatus: v.optional(v.string()),
     enforcementWorkflowStartedAt: v.optional(v.number()),
+    interactScrapeId: v.optional(v.string()),
+    interactLiveUrl: v.optional(v.string()),
+    interactTakeoverUrl: v.optional(v.string()),
+    interactSessionExpiresAt: v.optional(v.number()),
   })
     .index("by_org", ["organizationId"])
     .index("by_org_state", ["organizationId", "state"])
@@ -179,6 +183,7 @@ export default defineSchema({
     capturedAt: v.number(),
     contentHash: v.optional(v.string()),
     textContent: v.optional(v.string()),
+    fileId: v.optional(v.string()),
   })
     .index("by_case", ["caseId"])
     .index("by_discovery", ["discoveryId"])

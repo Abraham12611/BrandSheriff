@@ -4,6 +4,7 @@ import { useQuery, useMutation, useAction } from 'convex/react'
 import {
   Activity,
   AlertTriangle,
+  Camera,
   CheckCircle2,
   Copy,
   ExternalLink,
@@ -16,6 +17,7 @@ import {
   Search,
   Send,
   ShieldAlert,
+  Square,
   Store,
   X,
 } from 'lucide-react'
@@ -192,7 +194,7 @@ function RecheckResult({ raw }: { raw?: string }) {
   )
 }
 
-function EvidenceItem({ item }: { item: Doc<'evidenceItems'> }) {
+function EvidenceItem({ item }: { item: Doc<'evidenceItems'> & { fileUrl?: string | null } }) {
   const [expanded, setExpanded] = useState(false)
   const analysis = item.type === 'forensic_analysis' ? tryParseJson(item.textContent) : null
 
@@ -219,6 +221,15 @@ function EvidenceItem({ item }: { item: Doc<'evidenceItems'> }) {
         >
           <ExternalLink className="w-3 h-3" />
           <span className="truncate">{item.sourceUrl}</span>
+        </a>
+      )}
+      {item.fileUrl && (
+        <a href={item.fileUrl} target="_blank" rel="noreferrer" className="block mt-2 ml-6">
+          <img
+            src={item.fileUrl}
+            alt={item.title}
+            className="max-h-64 rounded-lg border border-neutral-200 object-contain"
+          />
         </a>
       )}
       {analysis ? (
@@ -264,6 +275,13 @@ const EVENT_LABEL: Record<string, string> = {
   discovery_created_manual: 'Discovery added manually',
   created: 'Created',
   deleted: 'Deleted',
+  watch_hit: 'Monitored page changed',
+  workflow_reply_seen: 'Reply received — follow-up loop ended',
+  workflow_still_live: 'Follow-up recheck: page still live',
+  workflow_takedown_detected: 'Follow-up recheck: page removed',
+  workflow_recheck: 'Follow-up recheck completed',
+  evidence_captured: 'Live browser evidence captured',
+  evidence_capture_failed: 'Browser capture failed',
 }
 
 export default function CaseDetail() {
@@ -313,6 +331,8 @@ export default function CaseDetail() {
   const startWatch = useMutation(api.hydra.startWatch)
   const stopWatch = useMutation(api.hydra.stopWatch)
   const checkNow = useMutation(api.enforcementFlow.checkNow)
+  const captureEvidence = useAction(api.interact.captureEvidence)
+  const endSession = useMutation(api.interact.endSession)
   const runWatch = useAction(api.hydra.runWatch)
   const resolve = useMutation(api.cases.resolve)
   const reopen = useMutation(api.cases.reopen)
@@ -556,10 +576,64 @@ export default function CaseDetail() {
                 </p>
               </section>
               <section className="app-panel overflow-hidden">
-                <div className="px-4 py-3 border-b border-neutral-100 font-medium text-sm">
-                  Evidence locker{' '}
-                  <span className="text-neutral-400 font-normal">({allEvidence.length})</span>
+                <div className="px-4 py-3 border-b border-neutral-100 font-medium text-sm flex items-center justify-between gap-3">
+                  <span>
+                    Evidence locker{' '}
+                    <span className="text-neutral-400 font-normal">({allEvidence.length})</span>
+                  </span>
+                  <button
+                    onClick={() =>
+                      void run(
+                        'capture',
+                        () => captureEvidence({ caseId: c._id }),
+                        'Browser capture saved to evidence',
+                      )
+                    }
+                    disabled={busyAction !== null}
+                    className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+                  >
+                    <Camera className={`w-3.5 h-3.5 ${busyAction === 'capture' ? 'animate-pulse' : ''}`} />
+                    {busyAction === 'capture' ? 'Capturing…' : 'Capture in live browser'}
+                  </button>
                 </div>
+                {c.interactSessionExpiresAt && c.interactSessionExpiresAt > Date.now() && (
+                  <div className="px-4 py-3 border-b border-neutral-100 bg-sky-50/60 flex items-center justify-between gap-3">
+                    <p className="text-xs text-sky-900">
+                      Live browser session active until{' '}
+                      {new Date(c.interactSessionExpiresAt).toLocaleTimeString()} — watch or take
+                      over the capture browser.
+                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {c.interactLiveUrl && (
+                        <a
+                          href={c.interactLiveUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-sky-200 text-sky-700 hover:bg-sky-100"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Watch
+                        </a>
+                      )}
+                      {c.interactTakeoverUrl && (
+                        <a
+                          href={c.interactTakeoverUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-sky-600 text-white hover:bg-sky-700"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" /> Take over
+                        </a>
+                      )}
+                      <button
+                        onClick={() => void run('endsession', () => endSession({ caseId: c._id }))}
+                        disabled={busyAction !== null}
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+                      >
+                        <Square className="w-3 h-3" /> End
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <ul className="divide-y divide-neutral-50">
                   {allEvidence.map((item) => (
                     <EvidenceItem key={item._id} item={item} />
