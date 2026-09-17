@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { env } from "./_generated/server";
 import { sendEvent } from "@convex-dev/workflow";
@@ -7,8 +7,9 @@ import type { WorkflowId } from "@convex-dev/workflow";
 import { progressEvent } from "./enforcementFlow";
 import { AgentMail } from "@agentmail/convex";
 import type { ComponentApi } from "@agentmail/convex/_generated/component.js";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { MEMBER_ROLES, requireCaseAccess, requireOrganizationMembership } from "./lib/authz";
+import { agentmailApi } from "./lib/agentmailApi";
 
 const agentmail = new AgentMail(
   components.agentmail as unknown as ComponentApi<"agentmail">,
@@ -26,6 +27,13 @@ type InboundMessage = {
   text?: string;
   extracted_text?: string;
   timestamp?: string | number;
+  attachments?: Array<{
+    attachment_id?: string;
+    id?: string;
+    filename?: string;
+    content_type?: string;
+    size?: number;
+  }>;
 };
 
 // Deterministic, honest classification — no AI conclusions. The label is a
@@ -117,6 +125,19 @@ export const onMessageReceived = internalMutation({
     }
 
     const to = Array.isArray(m.to) ? m.to : m.to ? [m.to] : [];
+    const attachments = (m.attachments ?? [])
+      .map((a) => {
+        const attachmentId = a.attachment_id ?? a.id;
+        if (!attachmentId) return null;
+        return {
+          attachmentId,
+          filename: a.filename,
+          contentType: a.content_type,
+          size: a.size,
+        };
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null);
+
     const caseMessageId = await ctx.db.insert("caseMessages", {
       organizationId: org._id,
       caseId: matchedCaseId ?? undefined,
@@ -130,8 +151,19 @@ export const onMessageReceived = internalMutation({
       preview: m.preview ?? (m.extracted_text ?? m.text ?? "").slice(0, 200),
       classification: classify(m),
       eventId: args.eventId,
+      attachments: attachments.length > 0 ? attachments : undefined,
       receivedAt: Date.now(),
     });
+
+    // Fetch attachment bytes into our own storage — the AgentMail download
+    // URLs expire, and evidence needs to outlive them.
+    if (attachments.length > 0 && m.message_id) {
+      await ctx.scheduler.runAfter(0, internal.mailInbound.fetchAttachments, {
+        caseMessageId,
+        inboxId: m.inbox_id,
+        messageId: m.message_id,
+      });
+    }
 
     // Optional deeper triage — only when the workspace enabled provider
     // actions and the deployment has an OpenAI key. Stays deterministic
@@ -181,16 +213,96 @@ export const onMessageReceived = internalMutation({
   },
 });
 
+// Downloads each attachment's bytes via the AgentMail signed URL and stores
+// them in Convex file storage, then stamps fileId onto the message row.
+export const fetchAttachments = internalAction({
+  args: {
+    caseMessageId: v.id("caseMessages"),
+    inboxId: v.string(),
+    messageId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const msg = await ctx.runQuery(internal.mailInbound.getMessage, {
+      caseMessageId: args.caseMessageId,
+    });
+    if (!msg?.attachments?.length) return;
+    for (const att of msg.attachments) {
+      try {
+        const meta = await agentmailApi<{ download_url?: string }>(
+          `/inboxes/${args.inboxId}/messages/${encodeURIComponent(args.messageId)}/attachments/${encodeURIComponent(att.attachmentId)}`,
+        );
+        if (!meta?.download_url) continue;
+        const res = await fetch(meta.download_url);
+        if (!res.ok) continue;
+        const fileId = await ctx.storage.store(await res.blob());
+        await ctx.runMutation(internal.mailInbound.attachFile, {
+          caseMessageId: args.caseMessageId,
+          attachmentId: att.attachmentId,
+          fileId,
+        });
+      } catch (e) {
+        console.error("attachment fetch failed:", e instanceof Error ? e.message : String(e));
+      }
+    }
+  },
+});
+
+export const attachFile = internalMutation({
+  args: {
+    caseMessageId: v.id("caseMessages"),
+    attachmentId: v.string(),
+    fileId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const msg = await ctx.db.get("caseMessages", args.caseMessageId);
+    if (!msg?.attachments) return;
+    await ctx.db.patch("caseMessages", args.caseMessageId, {
+      attachments: msg.attachments.map((a) =>
+        a.attachmentId === args.attachmentId ? { ...a, fileId: args.fileId } : a,
+      ),
+    });
+  },
+});
+
+export const getMessage = internalQuery({
+  args: { caseMessageId: v.id("caseMessages") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get("caseMessages", args.caseMessageId);
+  },
+});
+
 export const listByCase = query({
   args: { caseId: v.id("cases") },
   handler: async (ctx, args) => {
     await requireCaseAccess(ctx, args.caseId);
-    return await ctx.db
+    const rows = await ctx.db
       .query("caseMessages")
       .withIndex("by_case", (q) => q.eq("caseId", args.caseId))
       .collect();
+    return await withAttachmentUrls(ctx, rows);
   },
 });
+
+async function withAttachmentUrls(
+  ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> } },
+  rows: Doc<"caseMessages">[],
+) {
+  return await Promise.all(
+    rows.map(async (r) => ({
+      ...r,
+      attachments: r.attachments
+        ? await Promise.all(
+            r.attachments.map(async (a) => ({
+              ...a,
+              fileUrl: a.fileId
+                ? await ctx.storage.getUrl(a.fileId as Id<"_storage">)
+                : null,
+            })),
+          )
+        : undefined,
+    })),
+  );
+}
 
 export const markReadForCase = mutation({
   args: { caseId: v.id("cases") },
@@ -217,9 +329,10 @@ export const listUnmatched = query({
       .query("caseMessages")
       .withIndex("by_org", (q) => q.eq("organizationId", args.organizationId))
       .collect();
-    return rows
+    const unmatched = rows
       .filter((r) => r.caseId === undefined && r.direction === "in")
       .sort((a, b) => b.receivedAt - a.receivedAt);
+    return await withAttachmentUrls(ctx, unmatched);
   },
 });
 

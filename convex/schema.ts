@@ -303,6 +303,17 @@ export default defineSchema({
       }),
     ),
     eventId: v.optional(v.string()),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          attachmentId: v.string(),
+          filename: v.optional(v.string()),
+          contentType: v.optional(v.string()),
+          size: v.optional(v.number()),
+          fileId: v.optional(v.string()),
+        }),
+      ),
+    ),
     receivedAt: v.number(),
     readAt: v.optional(v.number()),
   })

@@ -939,6 +939,37 @@ export default function CaseDetail() {
                         <p className="text-xs text-neutral-600 mt-1 whitespace-pre-wrap leading-relaxed">
                           {m.text ?? m.preview ?? ''}
                         </p>
+                        {(m.attachments?.length ?? 0) > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {m.attachments!.map((a) =>
+                              a.fileUrl ? (
+                                <a
+                                  key={a.attachmentId}
+                                  href={a.fileUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                                >
+                                  <FileText className="w-3.5 h-3.5 text-neutral-400" />
+                                  {a.filename ?? 'attachment'}
+                                  {a.size ? (
+                                    <span className="text-neutral-400">
+                                      ({Math.round(a.size / 1024)} KB)
+                                    </span>
+                                  ) : null}
+                                </a>
+                              ) : (
+                                <span
+                                  key={a.attachmentId}
+                                  className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border border-neutral-100 text-neutral-400"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  {a.filename ?? 'attachment'} — fetching…
+                                </span>
+                              ),
+                            )}
+                          </div>
+                        )}
                         {m.direction === 'in' && m.classificationDetail?.summary && (
                           <p className="text-[11px] text-neutral-500 mt-1.5 italic">
                             AI triage: {m.classificationDetail.summary}
