@@ -80,6 +80,7 @@ export default defineSchema({
     status: v.string(),
     brandDnaStatus: v.string(),
     lastIndexedAt: v.optional(v.number()),
+    crawlId: v.optional(v.string()),
     keywords: v.optional(v.array(v.string())),
     allowlist: v.optional(v.array(v.string())),
   })

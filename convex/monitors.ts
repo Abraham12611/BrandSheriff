@@ -67,7 +67,7 @@ export const provision = internalAction({
             },
           ],
           webhook: {
-            url: `${siteUrl}/firecrawl/webhook`,
+            url: `${siteUrl}/monitor/webhook`,
             headers: { "X-BS-Token": token },
             metadata: { watchId: args.watchId },
             events: ["monitor.page"],

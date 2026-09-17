@@ -116,6 +116,13 @@ export const get = internalQuery({
   },
 });
 
+export const setCrawlId = internalMutation({
+  args: { brandId: v.id("brands"), crawlId: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch("brands", args.brandId, { crawlId: args.crawlId });
+  },
+});
+
 export const updateStatus = internalMutation({
   args: {
     brandId: v.id("brands"),

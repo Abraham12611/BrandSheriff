@@ -62,8 +62,10 @@ http.route({
 
 // Firecrawl monitor deliveries. Authenticated by a per-watch bearer token sent
 // as the X-BS-Token header (configured on the monitor's webhook at provision).
+// NOTE: lives off the /firecrawl/ prefix — the vendored component mounts its
+// own crawl-callback route at /firecrawl/webhook, which we must not shadow.
 http.route({
-  path: "/firecrawl/webhook",
+  path: "/monitor/webhook",
   method: "POST",
   handler: httpAction(async (ctx, req) => {
     const token = req.headers.get("x-bs-token") ?? "";
