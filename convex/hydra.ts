@@ -24,7 +24,7 @@ export const startWatch = mutation({
     if (c.brandId !== args.brandId) {
       throw new Error("Brand does not match case brand.");
     }
-    await ctx.db.insert("hydraWatches", {
+    const watchId = await ctx.db.insert("hydraWatches", {
       organizationId: c.organizationId,
       brandId: args.brandId,
       caseId: args.caseId,
@@ -33,6 +33,24 @@ export const startWatch = mutation({
       lastRunAt: Date.now(),
     });
     await ctx.db.patch(args.caseId, { state: "watching" });
+    // Provision a real Firecrawl monitor on the suspect page — falls back
+    // gracefully (monitorError) if provisioning fails; the cron sweep still runs.
+    await ctx.scheduler.runAfter(0, internal.monitors.provision, { watchId });
+  },
+});
+
+export const stopWatch = mutation({
+  args: { caseId: v.id("cases"), watchId: v.id("hydraWatches") },
+  handler: async (ctx, args) => {
+    const { case: c } = await requireCaseAccess(ctx, args.caseId);
+    const watch = await ctx.db.get("hydraWatches", args.watchId);
+    if (!watch || watch.organizationId !== c.organizationId) {
+      throw new Error("Watch not found.");
+    }
+    await ctx.db.patch("hydraWatches", args.watchId, { enabled: false });
+    if (watch.monitorId) {
+      await ctx.scheduler.runAfter(0, internal.monitors.pause, { watchId: args.watchId });
+    }
   },
 });
 

@@ -237,9 +237,17 @@ export default defineSchema({
     fingerprint: v.any(),
     enabled: v.boolean(),
     lastRunAt: v.optional(v.number()),
+    monitorId: v.optional(v.string()),
+    webhookToken: v.optional(v.string()),
+    monitorError: v.optional(v.string()),
+    lastCheckAt: v.optional(v.number()),
+    lastCheckStatus: v.optional(v.string()),
+    lastChangeAt: v.optional(v.number()),
+    lastChangeSummary: v.optional(v.string()),
   })
     .index("by_case", ["caseId"])
-    .index("by_discovery", ["discoveryId"]),
+    .index("by_discovery", ["discoveryId"])
+    .index("by_webhook_token", ["webhookToken"]),
 
   auditEvents: defineTable({
     organizationId: v.id("organizations"),

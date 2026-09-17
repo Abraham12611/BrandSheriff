@@ -60,4 +60,26 @@ http.route({
   }),
 });
 
+// Firecrawl monitor deliveries. Authenticated by a per-watch bearer token sent
+// as the X-BS-Token header (configured on the monitor's webhook at provision).
+http.route({
+  path: "/firecrawl/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const token = req.headers.get("x-bs-token") ?? "";
+    let payload: unknown;
+    try {
+      payload = await req.json();
+    } catch {
+      return new Response("bad request", { status: 400 });
+    }
+    const res = (await ctx.runMutation(internal.monitors.handleEvent, {
+      token,
+      payload,
+    })) as { ok: boolean };
+    if (!res.ok) return new Response("unauthorized", { status: 401 });
+    return new Response(null, { status: 204 });
+  }),
+});
+
 export default http;

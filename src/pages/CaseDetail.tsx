@@ -311,6 +311,7 @@ export default function CaseDetail() {
   const provisionMailbox = useAction(api.mailProvision.provision)
   const recheck = useAction(api.verification.recheckTarget)
   const startWatch = useMutation(api.hydra.startWatch)
+  const stopWatch = useMutation(api.hydra.stopWatch)
   const runWatch = useAction(api.hydra.runWatch)
   const resolve = useMutation(api.cases.resolve)
   const reopen = useMutation(api.cases.reopen)
@@ -893,29 +894,58 @@ export default function CaseDetail() {
                 </div>
                 <ul className="divide-y divide-neutral-50">
                   {watches?.map((w) => (
-                    <li key={w._id} className="px-4 py-3 flex items-center justify-between">
-                      <div>
-                        <span className="text-sm font-medium flex items-center gap-1.5">
-                          <Eye className="w-4 h-4 text-emerald-600" /> Watch active
-                        </span>
-                        {w.lastRunAt && (
-                          <span className="text-xs text-neutral-500">
-                            Last sweep {new Date(w.lastRunAt).toLocaleString()}
+                    <li key={w._id} className="px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-medium flex items-center gap-1.5">
+                            <Eye className={`w-4 h-4 ${w.enabled ? 'text-emerald-600' : 'text-neutral-400'}`} />
+                            {w.enabled ? 'Watch active' : 'Watch stopped'}
                           </span>
-                        )}
+                          <span className="text-xs text-neutral-500 block mt-0.5">
+                            {w.monitorId
+                              ? `Page monitored${w.lastCheckAt ? ` — last check ${new Date(w.lastCheckAt).toLocaleString()}${w.lastCheckStatus ? ` (${w.lastCheckStatus})` : ''}` : ''}`
+                              : w.monitorError
+                                ? `Page monitor unavailable — ${w.monitorError}`
+                                : 'Page monitor provisioning…'}
+                          </span>
+                          {w.lastRunAt && (
+                            <span className="text-xs text-neutral-500 block">
+                              Reappearance sweep {new Date(w.lastRunAt).toLocaleString()}
+                            </span>
+                          )}
+                          {w.lastChangeSummary && (
+                            <span className="text-xs text-amber-700 block mt-1">
+                              Change {w.lastChangeAt ? new Date(w.lastChangeAt).toLocaleString() : ''}:{' '}
+                              {w.lastChangeSummary}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1.5 shrink-0 ml-3">
+                          <button
+                            onClick={() => run(`watch-${w._id}`, () => runWatch({ watchId: w._id }))}
+                            disabled={busyAction === `watch-${w._id}` || !w.enabled}
+                            className="btn-secondary !py-1.5 text-xs"
+                          >
+                            {busyAction === `watch-${w._id}` ? 'Running…' : 'Run now'}
+                          </button>
+                          {w.enabled && (
+                            <button
+                              onClick={() =>
+                                run(`stopwatch-${w._id}`, () => stopWatch({ caseId: c._id, watchId: w._id }), 'Watch stopped')
+                              }
+                              disabled={busyAction === `stopwatch-${w._id}`}
+                              className="text-xs text-neutral-500 hover:text-neutral-800"
+                            >
+                              Stop
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <button
-                        onClick={() => run(`watch-${w._id}`, () => runWatch({ watchId: w._id }))}
-                        disabled={busyAction === `watch-${w._id}`}
-                        className="btn-secondary !py-1.5 text-xs"
-                      >
-                        {busyAction === `watch-${w._id}` ? 'Running…' : 'Run now'}
-                      </button>
                     </li>
                   ))}
                   {(watches?.length ?? 0) === 0 && (
                     <li className="px-4 py-4 text-sm text-neutral-500 text-center">
-                      No watch yet — start one to catch this operator reappearing.
+                      No watch yet — start one to monitor this page and catch reappearances.
                     </li>
                   )}
                 </ul>
