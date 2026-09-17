@@ -194,6 +194,32 @@ function RecheckResult({ raw }: { raw?: string }) {
   )
 }
 
+const DELIVERY_STYLE: Record<string, { label: string; tone: string }> = {
+  pending: { label: 'Queued', tone: 'bg-neutral-100 text-neutral-600' },
+  sent: { label: 'Sent', tone: 'bg-blue-50 text-blue-700' },
+  delivered: { label: 'Delivered', tone: 'bg-emerald-50 text-emerald-700' },
+  failed: { label: 'Failed', tone: 'bg-rose-50 text-rose-700' },
+  bounced: { label: 'Bounced', tone: 'bg-rose-50 text-rose-700' },
+  complained: { label: 'Complaint', tone: 'bg-rose-50 text-rose-700' },
+  rejected: { label: 'Rejected', tone: 'bg-rose-50 text-rose-700' },
+}
+
+// Live delivery state from the AgentMail outbound record — updates reactively
+// as webhook events (delivered/bounced/complained) land on the component.
+function DeliveryChip({ outboundId }: { outboundId: string }) {
+  const st = useQuery(api.mail.sendStatus, { outboundId })
+  if (!st) return null
+  const s = DELIVERY_STYLE[st.status] ?? { label: st.status, tone: 'bg-neutral-100 text-neutral-600' }
+  return (
+    <span
+      className={`badge ${s.tone}`}
+      title={st.errorMessage ?? undefined}
+    >
+      {s.label}
+    </span>
+  )
+}
+
 function EvidenceItem({ item }: { item: Doc<'evidenceItems'> & { fileUrl?: string | null } }) {
   const [expanded, setExpanded] = useState(false)
   const analysis = item.type === 'forensic_analysis' ? tryParseJson(item.textContent) : null
@@ -815,10 +841,13 @@ export default function CaseDetail() {
                         </button>
                       )}
                       {draft.status === 'sent' && (
-                        <p className="text-sm text-emerald-700 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4" /> Sent — replies arrive via the
-                          AgentMail webhook.
-                        </p>
+                        <div className="flex items-center gap-2.5">
+                          <p className="text-sm text-emerald-700 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4" /> Sent — replies arrive via the
+                            AgentMail webhook.
+                          </p>
+                          {draft.outboundId && <DeliveryChip outboundId={draft.outboundId} />}
+                        </div>
                       )}
                     </div>
                   </div>

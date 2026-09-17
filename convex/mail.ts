@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { internalMutation, query, action } from "./_generated/server";
 import { components, internal } from "./_generated/api";
-import { AgentMail, vOutboundId } from "@agentmail/convex";
+import { AgentMail } from "@agentmail/convex";
+import type { OutboundId } from "@agentmail/convex";
 import type { ComponentApi } from "@agentmail/convex/_generated/component.js";
 import { requireIdentity } from "./lib/authz";
 import { assertProviderActionsEnabled } from "./providerSafety";
@@ -109,12 +110,14 @@ export const sendFromCase = internalMutation({
 });
 
 export const sendStatus = query({
-  args: { outboundId: vOutboundId },
+  // Plain string at the API edge — the component's branded OutboundId doesn't
+  // exist in our dataModel, so clients can't produce it.
+  args: { outboundId: v.string() },
   handler: async (ctx, args) => {
     await requireIdentity(ctx);
     const draft = await ctx.db
       .query("draftNotices")
-      .withIndex("by_outbound", (q) => q.eq("outboundId", args.outboundId as string))
+      .withIndex("by_outbound", (q) => q.eq("outboundId", args.outboundId))
       .first();
     if (!draft) {
       throw new Error("Not found or insufficient permissions.");
@@ -123,6 +126,6 @@ export const sendStatus = query({
     if (!c) {
       throw new Error("Case not found.");
     }
-    return await agentmail.status(ctx, args.outboundId);
+    return await agentmail.status(ctx, args.outboundId as OutboundId);
   },
 });

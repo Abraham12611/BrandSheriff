@@ -217,6 +217,23 @@ export const listUnmatched = query({
       .query("caseMessages")
       .withIndex("by_org", (q) => q.eq("organizationId", args.organizationId))
       .collect();
-    return rows.filter((r) => r.caseId === undefined);
+    return rows
+      .filter((r) => r.caseId === undefined && r.direction === "in")
+      .sort((a, b) => b.receivedAt - a.receivedAt);
+  },
+});
+
+// Attach an unrouted inbound message to a case — it joins that case's
+// communication thread and clears from the unmatched inbox.
+export const assignToCase = mutation({
+  args: { caseMessageId: v.id("caseMessages"), caseId: v.id("cases") },
+  handler: async (ctx, args) => {
+    const { case: c } = await requireCaseAccess(ctx, args.caseId);
+    const msg = await ctx.db.get("caseMessages", args.caseMessageId);
+    if (!msg || msg.organizationId !== c.organizationId) {
+      throw new Error("Message not found.");
+    }
+    if (msg.caseId) throw new Error("Message is already assigned to a case.");
+    await ctx.db.patch("caseMessages", args.caseMessageId, { caseId: args.caseId });
   },
 });

@@ -1,9 +1,10 @@
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { Link } from 'react-router-dom'
 import {
   Activity,
   ArrowRight,
   Globe,
+  MailWarning,
   Plus,
   Radar,
   ShieldCheck,
@@ -11,7 +12,9 @@ import {
   Zap,
 } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { useWorkspace } from '../lib/workspace'
+import { useToast } from '../components/Toasts'
 import PageHeader from '../components/PageHeader'
 import Loading from '../components/Loading'
 import { PlatformChip } from '../components/discoveries/CompareCard'
@@ -49,6 +52,7 @@ function hostOf(url?: string): string {
 
 export default function Dashboard() {
   const { organization, isLoading: workspaceLoading } = useWorkspace()
+  const toast = useToast()
   const brands = useQuery(api.brands.list)
   const firstBrand = brands?.[0]
   const counts = useQuery(api.discoveries.countsByStatus, {})
@@ -61,6 +65,12 @@ export default function Dashboard() {
     firstBrand ? { brandId: firstBrand._id } : 'skip',
   )
   const recentEvents = useQuery(api.auditEvents.listRecent, { limit: 8 })
+  const unmatched = useQuery(
+    api.mailInbound.listUnmatched,
+    organization ? { organizationId: organization._id } : 'skip',
+  )
+  const allCases = useQuery(api.cases.listForOrg, {})
+  const assignToCase = useMutation(api.mailInbound.assignToCase)
 
   if (workspaceLoading) {
     return <Loading message="Loading workspace…" />
@@ -137,6 +147,57 @@ export default function Dashboard() {
           hint="all time"
         />
       </div>
+
+      {(unmatched?.length ?? 0) > 0 && (
+        <section className="app-panel overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-100 font-medium text-sm flex items-center gap-2">
+            <MailWarning className="w-4 h-4 text-amber-500" />
+            Unmatched inbox
+            <span className="text-neutral-400 font-normal">
+              ({unmatched!.length}) — replies that could not be routed to a case
+            </span>
+          </div>
+          <ul className="divide-y divide-neutral-50">
+            {unmatched!.map((m) => (
+              <li key={m._id} className="px-4 py-3 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-neutral-800 truncate">
+                    {m.fromAddr}
+                    {m.subject ? <span className="text-neutral-500"> — {m.subject}</span> : null}
+                  </div>
+                  <p className="text-xs text-neutral-600 mt-0.5 line-clamp-2">
+                    {m.preview ?? m.text ?? ''}
+                  </p>
+                  <p className="text-[11px] text-neutral-400 mt-1">
+                    {new Date(m.receivedAt).toLocaleString()}
+                  </p>
+                </div>
+                <select
+                  className="shrink-0 text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-white text-neutral-700"
+                  defaultValue=""
+                  onChange={async (e) => {
+                    const caseId = e.target.value as Id<'cases'> | ''
+                    if (!caseId) return
+                    try {
+                      await assignToCase({ caseMessageId: m._id, caseId })
+                      toast.success('Message attached to case')
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Assign failed')
+                    }
+                  }}
+                >
+                  <option value="">Assign to case…</option>
+                  {(allCases ?? []).map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.caseNumber} — {c.title}
+                    </option>
+                  ))}
+                </select>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {highPriority.length > 0 && (
         <section>

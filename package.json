@@ -19,7 +19,6 @@
   "dependencies": {
     "@agentmail/convex": "^0.1.0",
     "@clerk/react": "6.15.2",
-    "@convex-dev/agent": "^0.7.2",
     "@convex-dev/static-hosting": "^0.2.1",
     "@convex-dev/workflow": "0.4.6",
     "@convex-dev/workpool": "0.4.12",
