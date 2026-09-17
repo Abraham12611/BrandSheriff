@@ -4,6 +4,7 @@ import staticHosting from "@convex-dev/static-hosting/convex.config";
 import firecrawl from "@firecrawl/firecrawl-convex/convex.config";
 import agentmail from "../components/agentmail/convex.config";
 import agent from "@convex-dev/agent/convex.config";
+import workflow from "@convex-dev/workflow/convex.config";
 
 const app = defineApp({
   env: {
@@ -29,5 +30,6 @@ app.use(agentmail, {
   },
 });
 app.use(agent);
+app.use(workflow);
 
 export default app;

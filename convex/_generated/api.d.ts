@@ -22,6 +22,7 @@ import type * as discoveries from "../discoveries.js";
 import type * as domainVerifications from "../domainVerifications.js";
 import type * as draftNotices from "../draftNotices.js";
 import type * as enforcement from "../enforcement.js";
+import type * as enforcementFlow from "../enforcementFlow.js";
 import type * as evidenceItems from "../evidenceItems.js";
 import type * as files from "../files.js";
 import type * as forensics from "../forensics.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   domainVerifications: typeof domainVerifications;
   draftNotices: typeof draftNotices;
   enforcement: typeof enforcement;
+  enforcementFlow: typeof enforcementFlow;
   evidenceItems: typeof evidenceItems;
   files: typeof files;
   forensics: typeof forensics;
@@ -135,4 +137,5 @@ export declare const components: {
   firecrawl: import("@firecrawl/firecrawl-convex/_generated/component.js").ComponentApi<"firecrawl">;
   agentmail: import("../../components/agentmail/_generated/component.js").ComponentApi<"agentmail">;
   agent: import("@convex-dev/agent/_generated/component.js").ComponentApi<"agent">;
+  workflow: import("@convex-dev/workflow/_generated/component.js").ComponentApi<"workflow">;
 };

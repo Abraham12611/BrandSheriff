@@ -160,6 +160,9 @@ export default defineSchema({
     resolvedAt: v.optional(v.number()),
     contactRoutes: v.optional(v.array(v.any())),
     contactResearchedAt: v.optional(v.number()),
+    enforcementWorkflowId: v.optional(v.string()),
+    enforcementWorkflowStatus: v.optional(v.string()),
+    enforcementWorkflowStartedAt: v.optional(v.number()),
   })
     .index("by_org", ["organizationId"])
     .index("by_org_state", ["organizationId", "state"])

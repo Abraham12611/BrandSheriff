@@ -312,6 +312,7 @@ export default function CaseDetail() {
   const recheck = useAction(api.verification.recheckTarget)
   const startWatch = useMutation(api.hydra.startWatch)
   const stopWatch = useMutation(api.hydra.stopWatch)
+  const checkNow = useMutation(api.enforcementFlow.checkNow)
   const runWatch = useAction(api.hydra.runWatch)
   const resolve = useMutation(api.cases.resolve)
   const reopen = useMutation(api.cases.reopen)
@@ -996,6 +997,27 @@ export default function CaseDetail() {
                 )}
                 {inboxError && <p className="text-xs text-rose-600 mt-1.5">{inboxError}</p>}
               </div>
+
+              {c.enforcementWorkflowStatus === 'awaiting' && (
+                <div className="rounded-lg bg-sky-50 border border-sky-100 p-3 text-xs text-sky-800">
+                  <span className="font-medium">Follow-up loop armed.</span> Rechecks the target
+                  page in ~72h — or immediately when a reply lands.
+                  {c.enforcementWorkflowStartedAt && (
+                    <span className="block text-sky-600 mt-1">
+                      Armed {new Date(c.enforcementWorkflowStartedAt).toLocaleString()}
+                    </span>
+                  )}
+                  <button
+                    onClick={() =>
+                      run('checknow', () => checkNow({ caseId: c._id }), 'Check triggered — recheck running')
+                    }
+                    disabled={busyAction === 'checknow'}
+                    className="mt-2 text-sky-700 hover:text-sky-900 font-medium underline underline-offset-2"
+                  >
+                    {busyAction === 'checknow' ? 'Triggering…' : 'Run check now'}
+                  </button>
+                </div>
+              )}
 
               <button
                 onClick={() =>

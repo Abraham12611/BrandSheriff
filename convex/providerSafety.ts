@@ -30,6 +30,24 @@ export async function assertProviderActionsEnabled(
   }
 }
 
+// System-side variant for crons, workflows, and scheduled/internal callers —
+// no user identity exists there, so this checks only the workspace's own
+// opt-in flag. Interactive callers still go through assertProviderActionsEnabled.
+export async function assertOrgProviderEnabled(
+  ctx: GenericActionCtx<DataModel>,
+  organizationId: Id<"organizations">,
+) {
+  const org = (await ctx.runQuery(internal.organizations.get, {
+    organizationId,
+  })) as { settings?: { providerActionsEnabled?: boolean } } | null;
+  if (!org?.settings?.providerActionsEnabled) {
+    throw new ConvexError({
+      code: "PROVIDER_ACTIONS_DISABLED",
+      message: "Provider actions are not enabled for this workspace.",
+    });
+  }
+}
+
 export function assertDataSeedingEnabled(): void {
   throw new ConvexError({
     code: "DEMO_SEEDING_DISABLED",

@@ -7,13 +7,15 @@ import {
   internalQuery,
   internalMutation,
 } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import { requireCaseAccess } from "./lib/authz";
-import { assertProviderActionsEnabled } from "./providerSafety";
+import { assertOrgProviderEnabled, assertProviderActionsEnabled } from "./providerSafety";
 import { guessPlatform } from "./lib/platform";
 import type { Doc } from "./_generated/dataModel";
+import type { GenericActionCtx } from "convex/server";
+import type { DataModel } from "./_generated/dataModel";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 
@@ -23,6 +25,11 @@ export const startWatch = mutation({
     const { case: c } = await requireCaseAccess(ctx, args.caseId);
     if (c.brandId !== args.brandId) {
       throw new Error("Brand does not match case brand.");
+    }
+    // Watching provisions a paid monitor + paid searches — require opt-in.
+    const org = await ctx.db.get("organizations", c.organizationId);
+    if (!(org?.settings as { providerActionsEnabled?: boolean } | undefined)?.providerActionsEnabled) {
+      throw new Error("Provider actions are not enabled for this workspace.");
     }
     const watchId = await ctx.db.insert("hydraWatches", {
       organizationId: c.organizationId,
@@ -54,6 +61,48 @@ export const stopWatch = mutation({
   },
 });
 
+async function performWatchSweep(
+  ctx: GenericActionCtx<DataModel>,
+  watch: Doc<"hydraWatches">,
+) {
+  const brand = (await ctx.runQuery(internal.brands.get, { brandId: watch.brandId })) as Doc<"brands"> | null;
+  if (!brand) throw new Error("Brand not found");
+
+  const queries = [brand.name, `${brand.name} sale`, `${brand.name} discount`];
+  const foundUrls = new Set<string>();
+  for (const query of queries.slice(0, 3)) {
+    try {
+      const result = await firecrawl.search(ctx, query, { limit: 10 });
+      const data = (result as { web?: Array<{ url?: string }> }).web ?? [];
+      for (const item of data) {
+        if (item.url) foundUrls.add(item.url);
+      }
+    } catch (e) {
+      console.error("Hydra search failed for", query, e);
+    }
+  }
+
+  for (const url of foundUrls) {
+    const existing = await ctx.runQuery(internal.discoveries.getByUrl, {
+      organizationId: watch.organizationId,
+      canonicalUrl: url,
+    });
+    if (existing) continue;
+    await ctx.runMutation(internal.discoveries.createFromPatrol, {
+      organizationId: watch.organizationId,
+      brandId: watch.brandId,
+      canonicalUrl: url,
+      title: "Hydra reappearance",
+      status: "needs_review",
+      platformGuess: guessPlatform(url),
+      source: "watch",
+    });
+  }
+
+  await ctx.runMutation(internal.hydra.markRun, { watchId: watch._id });
+  return { discovered: foundUrls.size };
+}
+
 export const runWatch = action({
   args: { watchId: v.id("hydraWatches") },
   handler: async (ctx, args) => {
@@ -61,43 +110,20 @@ export const runWatch = action({
     if (!watch) throw new Error("Watch not found");
 
     await assertProviderActionsEnabled(ctx, watch.organizationId);
+    return await performWatchSweep(ctx, watch);
+  },
+});
 
-    const brand = (await ctx.runQuery(internal.brands.get, { brandId: watch.brandId })) as Doc<"brands"> | null;
-    if (!brand) throw new Error("Brand not found");
-
-    const queries = [brand.name, `${brand.name} sale`, `${brand.name} discount`];
-    const foundUrls = new Set<string>();
-    for (const query of queries.slice(0, 3)) {
-      try {
-        const result = await firecrawl.search(ctx, query, { limit: 10 });
-        const data = (result as { web?: Array<{ url?: string }> }).web ?? [];
-        for (const item of data) {
-          if (item.url) foundUrls.add(item.url);
-        }
-      } catch (e) {
-        console.error("Hydra search failed for", query, e);
-      }
-    }
-
-    for (const url of foundUrls) {
-      const existing = await ctx.runQuery(internal.discoveries.getByUrl, {
-        organizationId: watch.organizationId,
-        canonicalUrl: url,
-      });
-      if (existing) continue;
-      await ctx.runMutation(internal.discoveries.createFromPatrol, {
-        organizationId: watch.organizationId,
-        brandId: watch.brandId,
-        canonicalUrl: url,
-        title: "Hydra reappearance",
-        status: "needs_review",
-        platformGuess: guessPlatform(url),
-        source: "watch",
-      });
-    }
-
-    await ctx.runMutation(internal.hydra.markRun, { watchId: args.watchId });
-    return { discovered: foundUrls.size };
+// System-side entry for the cron sweep — same bug class as recheckTarget:
+// no user identity exists in scheduled contexts, so the workspace's own
+// provider flag is the gate.
+export const runWatchSystem = internalAction({
+  args: { watchId: v.id("hydraWatches") },
+  handler: async (ctx, args) => {
+    const watch = (await ctx.runQuery(internal.hydra.getById, { watchId: args.watchId })) as Doc<"hydraWatches"> | null;
+    if (!watch || !watch.enabled) return { skipped: true };
+    await assertOrgProviderEnabled(ctx, watch.organizationId);
+    return await performWatchSweep(ctx, watch);
   },
 });
 
@@ -130,7 +156,7 @@ export const sweepDue = internalAction({
       (w) => !w.lastRunAt || Date.now() - w.lastRunAt > SWEEP_INTERVAL_MS,
     );
     for (const w of due) {
-      await ctx.scheduler.runAfter(0, api.hydra.runWatch, { watchId: w._id });
+      await ctx.scheduler.runAfter(0, internal.hydra.runWatchSystem, { watchId: w._id });
     }
     return { scheduled: due.length, enabled: watches.length };
   },

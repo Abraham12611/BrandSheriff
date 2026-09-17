@@ -7,6 +7,7 @@ import { requireCaseAccess, requireDraftAccess } from "./lib/authz";
 import { assertProviderActionsEnabled } from "./providerSafety";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const FOLLOWUP_WAIT_MS = 72 * 60 * 60 * 1000;
 
 async function openaiChat(messages: Array<{ role: string; content: string }>, model = "gpt-4o-mini") {
   const apiKey = env.OPENAI_API_KEY;
@@ -158,6 +159,13 @@ export const approveAndSend = action({
       draftId: args.draftId,
       outboundId,
       to: args.to,
+    });
+
+    // Arm the durable post-send loop: awaits a reply (resumes instantly) or
+    // the wait window lapsing, then auto-rechecks the target page.
+    await ctx.runMutation(internal.enforcementFlow.arm, {
+      caseId: args.caseId,
+      waitMs: FOLLOWUP_WAIT_MS,
     });
 
     return { outboundId };

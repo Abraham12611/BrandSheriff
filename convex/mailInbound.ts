@@ -2,6 +2,9 @@ import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { env } from "./_generated/server";
+import { sendEvent } from "@convex-dev/workflow";
+import type { WorkflowId } from "@convex-dev/workflow";
+import { progressEvent } from "./enforcementFlow";
 import { AgentMail } from "@agentmail/convex";
 import type { ComponentApi } from "@agentmail/convex/_generated/component.js";
 import type { Id } from "./_generated/dataModel";
@@ -160,6 +163,20 @@ export const onMessageReceived = internalMutation({
         href: `/cases/${matchedCaseId}`,
         createdAt: Date.now(),
       });
+
+      // Wake the post-send workflow immediately if one is awaiting this case.
+      const c = await ctx.db.get("cases", matchedCaseId);
+      if (c?.enforcementWorkflowStatus === "awaiting" && c.enforcementWorkflowId) {
+        try {
+          await sendEvent(ctx, components.workflow, {
+            ...progressEvent,
+            workflowId: c.enforcementWorkflowId as WorkflowId,
+            value: { kind: "reply" },
+          });
+        } catch {
+          // Event consumption is best-effort — receipt itself already landed.
+        }
+      }
     }
   },
 });

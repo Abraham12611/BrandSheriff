@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { env } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { firecrawlApi } from "./lib/firecrawlApi";
+import { assertOrgProviderEnabled } from "./providerSafety";
 
 const WATCH_GOAL =
   "Alert when this page is removed or taken down, the listed price changes materially, " +
@@ -36,6 +37,9 @@ export const provision = internalAction({
       watchId: args.watchId,
     })) as { watch: Doc<"hydraWatches">; targetUrl: string | null } | null;
     if (!watch) return;
+
+    // Scheduled path runs with no user identity — gate on the workspace flag.
+    await assertOrgProviderEnabled(ctx, watch.watch.organizationId);
 
     const siteUrl = env.CONVEX_SITE_URL;
     if (!siteUrl || !watch.targetUrl) {
