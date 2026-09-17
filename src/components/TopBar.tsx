@@ -3,7 +3,7 @@ import { UserButton } from '@clerk/react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { ChevronDown, Bell, CheckCheck } from 'lucide-react'
+import { ChevronDown, Bell, CheckCheck, Settings2 } from 'lucide-react'
 import { useWorkspace } from '../lib/workspace'
 
 export default function TopBar() {
@@ -82,14 +82,20 @@ export default function TopBar() {
 function NotificationBell({ organizationId }: { organizationId: string }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [showPrefs, setShowPrefs] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const unread = useQuery(api.notifications.unreadCount, { organizationId: organizationId as never })
   const items = useQuery(
     api.notifications.listRecent,
     open ? { organizationId: organizationId as never } : 'skip',
   )
+  const prefs = useQuery(
+    api.notifications.prefs,
+    open && showPrefs ? { organizationId: organizationId as never } : 'skip',
+  )
   const markRead = useMutation(api.notifications.markRead)
   const markAllRead = useMutation(api.notifications.markAllRead)
+  const setPref = useMutation(api.notifications.setPref)
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -119,15 +125,49 @@ function NotificationBell({ organizationId }: { organizationId: string }) {
         <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-neutral-200 rounded-xl shadow-lg z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100">
             <span className="text-xs font-semibold text-neutral-800">Notifications</span>
-            {(unread ?? 0) > 0 && (
+            <div className="flex items-center gap-2.5">
+              {(unread ?? 0) > 0 && (
+                <button
+                  onClick={() => markAllRead({ organizationId: organizationId as never })}
+                  className="text-[11px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1"
+                >
+                  <CheckCheck className="w-3 h-3" /> Mark all read
+                </button>
+              )}
               <button
-                onClick={() => markAllRead({ organizationId: organizationId as never })}
-                className="text-[11px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1"
+                onClick={() => setShowPrefs((v) => !v)}
+                className={`text-neutral-400 hover:text-neutral-700 ${showPrefs ? 'text-neutral-700' : ''}`}
+                aria-label="Notification preferences"
+                aria-expanded={showPrefs}
               >
-                <CheckCheck className="w-3 h-3" /> Mark all read
+                <Settings2 className="w-3.5 h-3.5" />
               </button>
-            )}
+            </div>
           </div>
+          {showPrefs && (
+            <div className="px-4 py-2.5 border-b border-neutral-100 bg-neutral-50/60 space-y-1.5">
+              {(prefs ?? []).map((p) => (
+                <label key={p.type} className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={p.enabled}
+                    onChange={(e) =>
+                      setPref({
+                        organizationId: organizationId as never,
+                        type: p.type,
+                        enabled: e.target.checked,
+                      })
+                    }
+                    className="w-3.5 h-3.5 accent-neutral-900"
+                  />
+                  <span className="text-[11px] text-neutral-700">
+                    {p.label}
+                    <span className="block text-[10px] text-neutral-400">{p.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
           <div className="max-h-80 overflow-y-auto divide-y divide-neutral-50">
             {(items ?? []).length === 0 ? (
               <p className="px-4 py-6 text-center text-xs text-neutral-500">

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
+import { env } from "./_generated/server";
 import { AgentMail } from "@agentmail/convex";
 import type { ComponentApi } from "@agentmail/convex/_generated/component.js";
 import type { Id } from "./_generated/dataModel";
@@ -113,7 +114,7 @@ export const onMessageReceived = internalMutation({
     }
 
     const to = Array.isArray(m.to) ? m.to : m.to ? [m.to] : [];
-    await ctx.db.insert("caseMessages", {
+    const caseMessageId = await ctx.db.insert("caseMessages", {
       organizationId: org._id,
       caseId: matchedCaseId ?? undefined,
       threadId: m.thread_id,
@@ -128,6 +129,15 @@ export const onMessageReceived = internalMutation({
       eventId: args.eventId,
       receivedAt: Date.now(),
     });
+
+    // Optional deeper triage — only when the workspace enabled provider
+    // actions and the deployment has an OpenAI key. Stays deterministic
+    // otherwise; AI output is stored with provenance, never authoritative.
+    if (org.settings?.providerActionsEnabled === true && env.OPENAI_API_KEY) {
+      await ctx.scheduler.runAfter(0, internal.replyClassification.classify, {
+        caseMessageId,
+      });
+    }
 
     if (matchedCaseId) {
       await ctx.db.insert("auditEvents", {

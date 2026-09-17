@@ -38,6 +38,7 @@ export default defineSchema({
     role: v.string(),
     status: v.string(),
     invitedBy: v.optional(v.string()),
+    notificationPrefs: v.optional(v.record(v.string(), v.boolean())),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   })
@@ -274,6 +275,16 @@ export default defineSchema({
     text: v.optional(v.string()),
     preview: v.optional(v.string()),
     classification: v.optional(v.string()),
+    classificationSource: v.optional(v.string()),
+    classificationDetail: v.optional(
+      v.object({
+        intent: v.string(),
+        confidence: v.number(),
+        summary: v.string(),
+        model: v.string(),
+        classifiedAt: v.number(),
+      }),
+    ),
     eventId: v.optional(v.string()),
     receivedAt: v.number(),
     readAt: v.optional(v.number()),

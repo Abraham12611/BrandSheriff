@@ -800,16 +800,24 @@ export default function CaseDetail() {
                             {m.direction === 'in' && m.classification && (
                               <Badge
                                 label={
-                                  m.classification === 'auto_reply'
-                                    ? 'Auto-reply'
-                                    : m.classification === 'possible_compliance'
-                                      ? 'Possible compliance'
-                                      : 'Needs reading'
+                                  {
+                                    auto_reply: 'Auto-reply',
+                                    possible_compliance: 'Possible compliance',
+                                    needs_read: 'Needs reading',
+                                    compliance_confirmed: 'Compliance confirmed',
+                                    compliance_partial: 'Partial compliance',
+                                    question: 'Question',
+                                    refusal: 'Refusal',
+                                    negotiation: 'Negotiation',
+                                    legal_response: 'Legal response',
+                                    unrelated: 'Unrelated',
+                                    other: 'Other',
+                                  }[m.classification] ?? 'Needs reading'
                                 }
                                 tone={
-                                  m.classification === 'possible_compliance'
+                                  ['possible_compliance', 'compliance_confirmed'].includes(m.classification)
                                     ? STATE_STYLE.resolved
-                                    : m.classification === 'auto_reply'
+                                    : ['auto_reply', 'unrelated'].includes(m.classification)
                                       ? 'bg-neutral-100 text-neutral-600'
                                       : STATE_STYLE.reviewing
                                 }
@@ -826,11 +834,19 @@ export default function CaseDetail() {
                         <p className="text-xs text-neutral-600 mt-1 whitespace-pre-wrap leading-relaxed">
                           {m.text ?? m.preview ?? ''}
                         </p>
+                        {m.direction === 'in' && m.classificationDetail?.summary && (
+                          <p className="text-[11px] text-neutral-500 mt-1.5 italic">
+                            AI triage: {m.classificationDetail.summary}
+                          </p>
+                        )}
                         <p className="text-[11px] text-neutral-400 mt-1.5">
                           {new Date(m.receivedAt).toLocaleString()}
                           {m.direction === 'in' && m.classification && (
                             <span className="ml-1">
-                              · machine label — read the message before acting on it
+                              ·{' '}
+                              {m.classificationSource === 'ai'
+                                ? `AI label (${m.classificationDetail?.model ?? 'model'}) — verify before acting`
+                                : 'machine label — read the message before acting on it'}
                             </span>
                           )}
                         </p>
