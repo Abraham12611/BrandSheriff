@@ -10,6 +10,9 @@ export default defineSchema({
     defaultBrandId: v.optional(v.id("brands")),
     mailboxId: v.optional(v.string()),
     mailboxAddress: v.optional(v.string()),
+    mailboxPodId: v.optional(v.string()),
+    mailboxWebhookId: v.optional(v.string()),
+    mailboxProvisionedAt: v.optional(v.number()),
     settings: v.optional(v.any()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
@@ -251,6 +254,13 @@ export default defineSchema({
   })
     .index("by_org_time", ["organizationId", "timestamp"])
     .index("by_case_time", ["caseId", "timestamp"]),
+
+  webhookSecrets: defineTable({
+    scope: v.string(),
+    webhookId: v.string(),
+    secret: v.string(),
+    createdAt: v.number(),
+  }).index("by_scope", ["scope"]),
 
   caseMessages: defineTable({
     organizationId: v.id("organizations"),

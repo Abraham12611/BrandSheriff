@@ -28,10 +28,12 @@ import type * as forensics from "../forensics.js";
 import type * as http from "../http.js";
 import type * as hydra from "../hydra.js";
 import type * as invitations from "../invitations.js";
+import type * as lib_agentmailApi from "../lib/agentmailApi.js";
 import type * as lib_authz from "../lib/authz.js";
 import type * as lib_platform from "../lib/platform.js";
 import type * as mail from "../mail.js";
 import type * as mailInbound from "../mailInbound.js";
+import type * as mailProvision from "../mailProvision.js";
 import type * as memberships from "../memberships.js";
 import type * as notifications from "../notifications.js";
 import type * as organizations from "../organizations.js";
@@ -44,6 +46,7 @@ import type * as scans from "../scans.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
 import type * as verification from "../verification.js";
+import type * as webhookSecrets from "../webhookSecrets.js";
 
 import type {
   ApiFromModules,
@@ -72,10 +75,12 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   hydra: typeof hydra;
   invitations: typeof invitations;
+  "lib/agentmailApi": typeof lib_agentmailApi;
   "lib/authz": typeof lib_authz;
   "lib/platform": typeof lib_platform;
   mail: typeof mail;
   mailInbound: typeof mailInbound;
+  mailProvision: typeof mailProvision;
   memberships: typeof memberships;
   notifications: typeof notifications;
   organizations: typeof organizations;
@@ -88,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   users: typeof users;
   verification: typeof verification;
+  webhookSecrets: typeof webhookSecrets;
 }>;
 
 /**

@@ -7,11 +7,17 @@ export const setMailbox = internalMutation({
     organizationId: v.id("organizations"),
     mailboxId: v.string(),
     mailboxAddress: v.string(),
+    podId: v.optional(v.string()),
+    webhookId: v.optional(v.string()),
+    provisioned: v.optional(v.boolean()),
   },
   handler: async (ctx: any, args) => {
     await ctx.db.patch(args.organizationId, {
       mailboxId: args.mailboxId,
       mailboxAddress: args.mailboxAddress,
+      ...(args.podId !== undefined ? { mailboxPodId: args.podId } : {}),
+      ...(args.webhookId !== undefined ? { mailboxWebhookId: args.webhookId } : {}),
+      ...(args.provisioned ? { mailboxProvisionedAt: Date.now() } : {}),
       updatedAt: Date.now(),
     });
   },

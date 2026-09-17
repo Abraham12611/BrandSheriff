@@ -307,8 +307,8 @@ export default function CaseDetail() {
   const update = useMutation(api.enforcement.updateDraft)
   const research = useAction(api.contactResearch.research)
   const approveSend = useAction(api.enforcement.approveAndSend)
-  const resolveInbox = useAction(api.mail.resolveInbox)
   const connectManual = useAction(api.mail.connectInboxManual)
+  const provisionMailbox = useAction(api.mailProvision.provision)
   const recheck = useAction(api.verification.recheckTarget)
   const startWatch = useMutation(api.hydra.startWatch)
   const runWatch = useAction(api.hydra.runWatch)
@@ -375,9 +375,10 @@ export default function CaseDetail() {
     setInboxError(null)
     setInboxBusy(true)
     try {
-      await resolveInbox({ organizationId: organization._id })
+      const res = await provisionMailbox({ organizationId: organization._id })
+      toast.success(`Mailbox ready — ${res.email}`)
     } catch (e) {
-      setInboxError(e instanceof Error ? e.message : 'Failed to resolve AgentMail inbox')
+      setInboxError(e instanceof Error ? e.message : 'Failed to provision mailbox')
     } finally {
       setInboxBusy(false)
     }
@@ -927,7 +928,7 @@ export default function CaseDetail() {
                       disabled={inboxBusy}
                       className="btn-secondary w-full !py-1.5 text-xs"
                     >
-                      {inboxBusy ? 'Connecting…' : 'Connect AgentMail inbox'}
+                      {inboxBusy ? 'Provisioning…' : 'Provision workspace mailbox'}
                     </button>
                     <div className="flex gap-1.5 mt-2">
                       <input

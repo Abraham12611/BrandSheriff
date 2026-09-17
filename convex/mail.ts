@@ -5,6 +5,8 @@ import { AgentMail, vOutboundId } from "@agentmail/convex";
 import type { ComponentApi } from "@agentmail/convex/_generated/component.js";
 import { requireIdentity } from "./lib/authz";
 import { assertProviderActionsEnabled } from "./providerSafety";
+import { agentmailApi } from "./lib/agentmailApi";
+import type { Doc } from "./_generated/dataModel";
 
 const agentmail = new AgentMail(
   components.agentmail as unknown as ComponentApi<"agentmail">,
@@ -14,6 +16,26 @@ export const resolveInbox = action({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {
     await assertProviderActionsEnabled(ctx, args.organizationId);
+
+    const org = (await ctx.runQuery(internal.organizations.get, {
+      organizationId: args.organizationId,
+    })) as Doc<"organizations"> | null;
+
+    // Pod-provisioned workspace: prefer the pod's own inbox.
+    if (org?.mailboxPodId) {
+      const podInboxes = await agentmailApi<{ inboxes?: Array<{ inbox_id: string; email: string }> }>(
+        `/pods/${org.mailboxPodId}/inboxes?limit=20`,
+      );
+      const inbox = (podInboxes.inboxes ?? [])[0];
+      if (inbox) {
+        await ctx.runMutation(internal.organizations.setMailbox, {
+          organizationId: args.organizationId,
+          mailboxId: inbox.inbox_id,
+          mailboxAddress: inbox.email,
+        });
+        return inbox;
+      }
+    }
 
     let inboxes;
     try {
