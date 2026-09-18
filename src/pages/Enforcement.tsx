@@ -55,6 +55,31 @@ export default function Enforcement() {
     api.enforcementRoutes.listForOrganization,
     organization ? { organizationId: organization._id } : 'skip',
   ) as Row[] | undefined
+  const stats = useQuery(
+    api.enforcementStats.routeStats,
+    organization ? { organizationId: organization._id } : 'skip',
+  ) as
+    | {
+        channels: Array<{
+          channel: string
+          total: number
+          submitted: number
+          actioned: number
+          rejected: number
+          inFlight: number
+          counterNotices: number
+          actionedRate: number | null
+          medianDaysToAction: number | null
+        }>
+        totals: {
+          total: number
+          actioned: number
+          inFlight: number
+          recommended: number
+          counterNotices: number
+        }
+      }
+    | undefined
 
   const filtered = useMemo(() => {
     const all = rows ?? []
@@ -156,6 +181,54 @@ export default function Enforcement() {
               )
             })}
           </div>
+
+          {stats && stats.channels.length > 0 && (
+            <section className="app-panel overflow-hidden">
+              <div className="px-4 py-3 border-b border-neutral-100">
+                <h2 className="font-medium text-sm">What works — outcome by channel</h2>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Learned from this workspace's filings. Rates count only decided actions
+                  (actioned vs rejected).
+                </p>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-neutral-500 border-b border-neutral-100">
+                    <th className="px-4 py-2 font-medium">Channel</th>
+                    <th className="px-4 py-2 font-medium text-right">Filed</th>
+                    <th className="px-4 py-2 font-medium text-right">In flight</th>
+                    <th className="px-4 py-2 font-medium text-right">Actioned</th>
+                    <th className="px-4 py-2 font-medium text-right">Rejected</th>
+                    <th className="px-4 py-2 font-medium text-right">Counter-notices</th>
+                    <th className="px-4 py-2 font-medium text-right">Success rate</th>
+                    <th className="px-4 py-2 font-medium text-right">Median days</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.channels.map((c) => (
+                    <tr key={c.channel} className="border-b border-neutral-50 last:border-0">
+                      <td className="px-4 py-2.5 capitalize font-medium text-neutral-800">
+                        {c.channel.replace(/_/g, ' ')}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-neutral-600">{c.submitted}</td>
+                      <td className="px-4 py-2.5 text-right text-neutral-600">{c.inFlight}</td>
+                      <td className="px-4 py-2.5 text-right text-emerald-700 font-medium">
+                        {c.actioned}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-rose-600">{c.rejected}</td>
+                      <td className="px-4 py-2.5 text-right text-orange-600">{c.counterNotices}</td>
+                      <td className="px-4 py-2.5 text-right text-neutral-700 font-medium">
+                        {c.actionedRate !== null ? `${c.actionedRate}%` : '—'}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-neutral-600">
+                        {c.medianDaysToAction !== null ? c.medianDaysToAction : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
 
           <div className="app-panel p-4 flex items-start gap-3">
             <ShieldAlert className="w-4 h-4 text-neutral-400 mt-0.5 shrink-0" />

@@ -160,6 +160,12 @@ export default defineSchema({
     source: v.optional(v.string()),
     matchedQuery: v.optional(v.string()),
     alertSentAt: v.optional(v.number()),
+    // Composite clone-risk score (0-100) + the explainable signal rows that
+    // produced it, in `cloneSignals`. Never a legal conclusion — a triage
+    // ordering signal.
+    cloneScore: v.optional(v.number()),
+    cloneScoreComputedAt: v.optional(v.number()),
+    offenderId: v.optional(v.id("offenders")),
     priority: v.optional(v.string()),
     denialReason: v.optional(v.string()),
     reviewedBy: v.optional(v.string()),
@@ -219,6 +225,68 @@ export default defineSchema({
     .index("by_case", ["caseId"])
     .index("by_org_status", ["organizationId", "status"])
     .index("by_case_route", ["caseId", "route"]),
+
+  // Explainable clone-risk signals — one row per detected signal feeding a
+  // discovery's cloneScore. Factual observations, not legal conclusions.
+  cloneSignals: defineTable({
+    organizationId: v.id("organizations"),
+    discoveryId: v.id("discoveries"),
+    signal: v.string(), // product_image_match | brand_asset_match | description_similarity | domain_impersonation | repeat_offender | keyword_attribution | marketplace_listing | social_account | evidence_strength
+    finding: v.string(), // human-readable "3 brand images re-hosted exactly"
+    weight: v.number(), // contribution to cloneScore (0-100 scale)
+    severity: v.string(), // strong | medium | weak
+    detail: v.optional(v.any()),
+    computedAt: v.number(),
+  })
+    .index("by_discovery", ["discoveryId"])
+    .index("by_org", ["organizationId"]),
+
+  // Brand Rights Graph — what the business owns: marks, registrations,
+  // domains, official accounts, authorized sellers, ad accounts, proof docs.
+  rightsObjects: defineTable({
+    organizationId: v.id("organizations"),
+    brandId: v.id("brands"),
+    kind: v.string(), // trademark | copyright_registration | design_right | domain | official_account | authorized_seller | ad_account | proof_document
+    label: v.string(),
+    value: v.optional(v.string()), // registration no, domain, handle, seller name
+    territory: v.optional(v.string()), // US | EU | UK | global | ...
+    status: v.string(), // registered | pending | unregistered | active | verified
+    fileId: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_brand", ["brandId"])
+    .index("by_org_kind", ["organizationId", "kind"]),
+
+  // Offender Graph — entities linking discoveries that look like one
+  // operation. v1 links on shared host; shared stolen-asset matches and
+  // contact patterns extend it later.
+  offenders: defineTable({
+    organizationId: v.id("organizations"),
+    brandId: v.id("brands"),
+    label: v.string(), // primary host / seller name
+    status: v.string(), // suspected | confirmed | resolved
+    firstSeenAt: v.number(),
+    lastSeenAt: v.number(),
+    maxCloneScore: v.optional(v.number()),
+  })
+    .index("by_org", ["organizationId"])
+    .index("by_brand", ["brandId"])
+    .index("by_org_label", ["organizationId", "label"]),
+
+  offenderLinks: defineTable({
+    organizationId: v.id("organizations"),
+    offenderId: v.id("offenders"),
+    discoveryId: v.id("discoveries"),
+    matchType: v.string(), // same_host | shared_image | shared_contact | shared_query
+    createdAt: v.number(),
+  })
+    .index("by_offender", ["offenderId"])
+    .index("by_discovery", ["discoveryId"])
+    .index("by_offender_discovery", ["offenderId", "discoveryId"]),
 
   evidenceItems: defineTable({
     organizationId: v.id("organizations"),
@@ -346,6 +414,11 @@ export default defineSchema({
         summary: v.string(),
         model: v.string(),
         classifiedAt: v.number(),
+        // Extracted platform artifacts — ticket/case IDs, deadlines,
+        // whether the sender looks like a platform/system address.
+        refs: v.optional(v.array(v.string())),
+        deadline: v.optional(v.string()),
+        platformSender: v.optional(v.boolean()),
       }),
     ),
     eventId: v.optional(v.string()),

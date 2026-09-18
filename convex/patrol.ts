@@ -4,6 +4,7 @@ import { components, internal } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import { assertProviderActionsEnabled } from "./providerSafety";
 import { guessPlatform } from "./lib/platform";
+import type { Id } from "./_generated/dataModel";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 
@@ -84,17 +85,28 @@ export const runSearch = action({
         canonicalUrl: url,
       });
       if (existing) continue;
-      await ctx.runMutation(internal.discoveries.createFromPatrol, {
-        organizationId: brand.organizationId,
-        brandId: args.brandId,
-        runId: args.runId,
-        canonicalUrl: url,
-        title: meta.title ?? "Discovered URL",
-        summary: meta.summary,
-        status: "needs_review",
-        platformGuess: guessPlatform(url),
-        source: "patrol",
-        matchedQuery: meta.query,
+      const createdDiscovery = (await ctx.runMutation(
+        internal.discoveries.createFromPatrol,
+        {
+          organizationId: brand.organizationId,
+          brandId: args.brandId,
+          runId: args.runId,
+          canonicalUrl: url,
+          title: meta.title ?? "Discovered URL",
+          summary: meta.summary,
+          status: "needs_review",
+          platformGuess: guessPlatform(url),
+          source: "patrol",
+          matchedQuery: meta.query,
+        },
+      )) as { discoveryId: Id<"discoveries"> };
+      // Score it and join it to the offender graph — both cheap, both make
+      // the review queue ordered instead of flat.
+      await ctx.scheduler.runAfter(0, internal.cloneScore.compute, {
+        discoveryId: createdDiscovery.discoveryId,
+      });
+      await ctx.scheduler.runAfter(0, internal.offenders.upsertForDiscovery, {
+        discoveryId: createdDiscovery.discoveryId,
       });
       created++;
     }

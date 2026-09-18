@@ -29,6 +29,7 @@ import Loading from '../components/Loading'
 import Modal from '../components/Modal'
 import { PlatformChip } from '../components/discoveries/CompareCard'
 import RoutesPanel from '../components/enforcement/RoutesPanel'
+import SignalsPanel from '../components/enforcement/SignalsPanel'
 
 type TabKey = 'details' | 'activity' | 'enforcement'
 
@@ -602,6 +603,7 @@ export default function CaseDetail() {
                   {c.summary || discovery?.summary || 'No summary yet — run an investigation on the discovery.'}
                 </p>
               </section>
+              <SignalsPanel discovery={discovery} />
               <section className="app-panel overflow-hidden">
                 <div className="px-4 py-3 border-b border-neutral-100 font-medium text-sm flex items-center justify-between gap-3">
                   <span>

@@ -15,6 +15,8 @@ import {
   Gavel,
   Users,
   Settings,
+  Network,
+  Landmark,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
@@ -51,9 +53,11 @@ export default function Sidebar() {
     { to: '/discoveries', label: 'Discoveries', icon: Radar, badge: needsReview },
     { to: '/cases', label: 'Cases', icon: Briefcase },
     { to: '/enforcement', label: 'Enforcement', icon: Gavel },
+    { to: '/networks', label: 'Networks', icon: Network },
   ]
   const brandItems: NavItem[] = [
     { to: '/brand', label: 'Brand Profile', icon: Fingerprint },
+    { to: '/rights', label: 'Rights Vault', icon: Landmark },
   ]
   const dataItems: NavItem[] = [
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },

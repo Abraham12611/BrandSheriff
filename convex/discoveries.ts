@@ -348,7 +348,7 @@ export const createFromPatrol = internalMutation({
     matchedQuery: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("discoveries", {
+    const discoveryId = await ctx.db.insert("discoveries", {
       organizationId: args.organizationId,
       brandId: args.brandId,
       patrolRunId: args.runId,
@@ -377,6 +377,7 @@ export const createFromPatrol = internalMutation({
         });
       }
     }
+    return { discoveryId };
   },
 });
 

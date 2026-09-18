@@ -32,11 +32,13 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key']
 
-type SortKey = 'newest' | 'similarity'
+type SortKey = 'newest' | 'similarity' | 'risk'
 
 function sortDiscoveries(list: Doc<'discoveries'>[], sort: SortKey) {
   const copy = [...list]
-  if (sort === 'similarity') {
+  if (sort === 'risk') {
+    copy.sort((a, b) => (b.cloneScore ?? -1) - (a.cloneScore ?? -1))
+  } else if (sort === 'similarity') {
     copy.sort(
       (a, b) =>
         (b.similarityScore ?? b.matchConfidence ?? -1) -
@@ -390,6 +392,7 @@ export default function Discoveries() {
                   aria-label="Sort discoveries"
                 >
                   <option value="newest">Newest first</option>
+                  <option value="risk">Highest clone risk</option>
                   <option value="similarity">Highest similarity</option>
                 </select>
                 <ArrowDownWideNarrow className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />

@@ -15,6 +15,16 @@ const NOTIFICATION_TYPES = [
     label: "Watch alerts",
     description: "When a watched listing reappears or changes",
   },
+  {
+    type: "discovery_alert",
+    label: "Urgent discoveries",
+    description: "Exact asset matches and high-severity patrol findings",
+  },
+  {
+    type: "counter_notice",
+    label: "Legal escalations",
+    description: "Counter-notices, legal responses and platform decisions needing attention",
+  },
 ] as const;
 
 function isMuted(prefs: Record<string, boolean> | undefined, type: string) {

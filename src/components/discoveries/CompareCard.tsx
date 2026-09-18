@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQuery } from 'convex/react'
 import {
   Check,
   ChevronDown,
@@ -6,11 +7,14 @@ import {
   ExternalLink,
   Eye,
   Flag,
+  Gauge,
   MoreHorizontal,
   RotateCcw,
   Search,
 } from 'lucide-react'
 import type { Doc } from '../../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
+import { useWorkspace } from '../../lib/workspace'
 
 export type DiscoveryAction =
   | 'approve'
@@ -173,6 +177,14 @@ export default function CompareCard({
   busy: boolean
 }) {
   const [copied, setCopied] = useState(false)
+  const [showSignals, setShowSignals] = useState(false)
+  const { organization } = useWorkspace()
+  const signals = useQuery(
+    api.cloneScore.listSignals,
+    showSignals && organization
+      ? { discoveryId: discovery._id, organizationId: organization._id }
+      : 'skip',
+  )
   const similarity = discovery.similarityScore ?? discovery.matchConfidence
   const similarityPct = similarity !== undefined ? Math.round(similarity * 100) : null
   const visualPct =
@@ -216,6 +228,20 @@ export default function CompareCard({
           <span className="text-sm font-medium truncate max-w-[180px]">{host}</span>
         </label>
         <div className="flex items-center gap-1.5">
+          {discovery.cloneScore !== undefined && (
+            <span
+              className={`badge font-semibold ${
+                discovery.cloneScore >= 70
+                  ? 'bg-rose-50 text-rose-700'
+                  : discovery.cloneScore >= 40
+                    ? 'bg-amber-50 text-amber-700'
+                    : 'bg-neutral-100 text-neutral-500'
+              }`}
+              title="Clone risk score — composite of explainable signals"
+            >
+              <Gauge className="w-3 h-3" /> {discovery.cloneScore}
+            </span>
+          )}
           {discovery.severity && (
             <span className={`badge ${SEVERITY_STYLE[discovery.severity] ?? SEVERITY_STYLE.low}`}>
               {discovery.severity}
@@ -295,6 +321,47 @@ export default function CompareCard({
         <ExternalLink className="w-3 h-3 shrink-0" />
         <span className="truncate">{discovery.title ?? discovery.canonicalUrl}</span>
       </a>
+
+      {discovery.cloneScore !== undefined && (
+        <div>
+          <button
+            onClick={() => setShowSignals((s) => !s)}
+            className="text-[11px] font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1"
+          >
+            <Gauge className="w-3 h-3" />
+            {showSignals ? 'Hide signal breakdown' : `Why ${discovery.cloneScore}/100?`}
+          </button>
+          {showSignals && (
+            <div className="mt-1.5 rounded-lg bg-neutral-50 border border-neutral-100 divide-y divide-neutral-100">
+              {signals === undefined ? (
+                <p className="px-2.5 py-2 text-[11px] text-neutral-400">Loading signals…</p>
+              ) : signals.length === 0 ? (
+                <p className="px-2.5 py-2 text-[11px] text-neutral-400">No signals recorded yet.</p>
+              ) : (
+                signals.map((s) => (
+                  <div key={s._id} className="px-2.5 py-1.5 flex items-start gap-2">
+                    <span
+                      className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${
+                        s.severity === 'strong'
+                          ? 'bg-rose-500'
+                          : s.severity === 'medium'
+                            ? 'bg-amber-400'
+                            : 'bg-neutral-300'
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] text-neutral-700 leading-snug">{s.finding}</p>
+                    </div>
+                    <span className="text-[10px] font-mono text-neutral-400 shrink-0">
+                      +{s.weight}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-100 mt-auto">
         {status === 'needs_review' && (

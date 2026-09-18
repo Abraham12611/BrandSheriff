@@ -177,6 +177,13 @@ export const handleEvent = internalMutation({
           href: watch.caseId ? `/cases/${watch.caseId}` : undefined,
           createdAt: Date.now(),
         });
+        if (watch.caseId) {
+          await ctx.scheduler.runAfter(0, internal.mailAlerts.notifyWatchHit, {
+            caseId: watch.caseId,
+            summary,
+            removed: page.status === "removed",
+          });
+        }
       }
       await ctx.db.patch("hydraWatches", watch._id, patch);
     }

@@ -147,6 +147,18 @@ export const scoreSuspectImages = internalAction({
       suspectImageFileId: best.score >= MATCH_FLOOR ? best.fileId : undefined,
     });
 
+    // Re-score with the fresh visual match, then join the offender graph
+    // (shared stolen assets link different hosts to one operation).
+    await ctx.scheduler.runAfter(0, internal.cloneScore.compute, {
+      discoveryId: args.discoveryId,
+    });
+    await ctx.scheduler.runAfter(0, internal.offenders.upsertForDiscovery, {
+      discoveryId: args.discoveryId,
+    });
+    await ctx.scheduler.runAfter(0, internal.offenders.linkSharedAssets, {
+      discoveryId: args.discoveryId,
+    });
+
     // High-confidence image theft → alert workspace members via AgentMail.
     if (best.score >= 0.8) {
       await ctx.scheduler.runAfter(0, internal.mailAlerts.notifyDiscovery, {

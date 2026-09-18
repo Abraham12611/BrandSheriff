@@ -11,6 +11,8 @@ import CaseDetail from './pages/CaseDetail'
 import Enforcement from './pages/Enforcement'
 import People from './pages/People'
 import Settings from './pages/Settings'
+import Rights from './pages/Rights'
+import Networks from './pages/Networks'
 import Analytics from './pages/Analytics'
 import Reports from './pages/Reports'
 import ReportView from './pages/ReportView'
@@ -89,6 +91,22 @@ export function AppRoutes() {
               element={
                 <WorkspaceRequired>
                   <Enforcement />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/rights"
+              element={
+                <WorkspaceRequired>
+                  <Rights />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/networks"
+              element={
+                <WorkspaceRequired>
+                  <Networks />
                 </WorkspaceRequired>
               }
             />
