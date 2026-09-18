@@ -40,24 +40,42 @@ export const runSearch = action({
       }
     };
 
+    // Keyword fallback chain: active keyword rows → legacy brand.keywords
+    // array → caller-provided defaults (name-derived).
+    const activeTerms = (await ctx.runQuery(internal.keywords.listActiveTerms, {
+      brandId: args.brandId,
+    })) as string[];
     const queries =
-      brand.keywords && brand.keywords.length > 0 ? brand.keywords : args.queries;
+      activeTerms.length > 0
+        ? activeTerms
+        : brand.keywords && brand.keywords.length > 0
+          ? brand.keywords
+          : args.queries;
+    const used = queries.slice(0, 8);
 
-    const found = new Map<string, { title?: string; summary?: string }>();
-    for (const query of queries.slice(0, 8)) {
+    const found = new Map<string, { title?: string; summary?: string; query: string }>();
+    for (const query of used) {
       try {
         const result = await firecrawl.search(ctx, query, { limit: 10 });
         // The component returns body.data directly; web hits live under `web`.
         const data = (result as { web?: Array<{ url?: string; title?: string; description?: string }> }).web ?? [];
         for (const item of data) {
           if (item.url && !isSelf(item.url) && !isAllowed(item.url)) {
-            found.set(item.url, { title: item.title, summary: item.description });
+            // First query to surface a URL keeps the attribution.
+            if (!found.has(item.url)) {
+              found.set(item.url, { title: item.title, summary: item.description, query });
+            }
           }
         }
       } catch (e) {
         console.error("Search failed for query", query, e);
       }
     }
+
+    await ctx.runMutation(internal.keywords.touchUsed, {
+      brandId: args.brandId,
+      terms: used,
+    });
 
     let created = 0;
     for (const [url, meta] of found) {
@@ -76,6 +94,7 @@ export const runSearch = action({
         status: "needs_review",
         platformGuess: guessPlatform(url),
         source: "patrol",
+        matchedQuery: meta.query,
       });
       created++;
     }

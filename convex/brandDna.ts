@@ -137,6 +137,12 @@ export const ingestCrawl = internalAction({
       });
     }
 
+    // Keyword suggestion runs once per crawl — proposals land as
+    // "suggested" rows for human review, never straight into patrols.
+    await ctx.scheduler.runAfter(0, internal.keywords.suggestKeywords, {
+      brandId: args.brandId,
+    });
+
     await ctx.runMutation(internal.brands.updateStatus, {
       brandId: args.brandId,
       brandDnaStatus: stored > 0 ? "active" : "failed",

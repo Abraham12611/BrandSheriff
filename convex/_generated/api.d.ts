@@ -31,6 +31,7 @@ import type * as hydra from "../hydra.js";
 import type * as images from "../images.js";
 import type * as interact from "../interact.js";
 import type * as invitations from "../invitations.js";
+import type * as keywords from "../keywords.js";
 import type * as lib_agentmailApi from "../lib/agentmailApi.js";
 import type * as lib_authz from "../lib/authz.js";
 import type * as lib_firecrawlApi from "../lib/firecrawlApi.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   images: typeof images;
   interact: typeof interact;
   invitations: typeof invitations;
+  keywords: typeof keywords;
   "lib/agentmailApi": typeof lib_agentmailApi;
   "lib/authz": typeof lib_authz;
   "lib/firecrawlApi": typeof lib_firecrawlApi;

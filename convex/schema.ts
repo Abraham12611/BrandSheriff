@@ -87,6 +87,22 @@ export default defineSchema({
     .index("by_org", ["organizationId"])
     .index("by_domain", ["canonicalDomain"]),
 
+  // AI-proposed + user-managed search terms that feed patrol queries.
+  // Lifecycle: suggested → (Track) active ⇄ inactive, or → (Dismiss) rejected.
+  brandKeywords: defineTable({
+    organizationId: v.id("organizations"),
+    brandId: v.id("brands"),
+    term: v.string(),
+    category: v.string(), // brand | product | variant | misspelling | marketplace | custom
+    source: v.string(), // "ai" | "user"
+    status: v.string(), // "suggested" | "active" | "inactive" | "rejected"
+    rationale: v.optional(v.string()),
+    hits: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+  })
+    .index("by_brand", ["brandId"])
+    .index("by_brand_status", ["brandId", "status"]),
+
   brandAssets: defineTable({
     organizationId: v.id("organizations"),
     brandId: v.id("brands"),
@@ -142,6 +158,7 @@ export default defineSchema({
     matchedAssetId: v.optional(v.id("brandAssets")),
     suspectImageFileId: v.optional(v.string()),
     source: v.optional(v.string()),
+    matchedQuery: v.optional(v.string()),
     priority: v.optional(v.string()),
     denialReason: v.optional(v.string()),
     reviewedBy: v.optional(v.string()),

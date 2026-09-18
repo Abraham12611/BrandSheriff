@@ -11,6 +11,7 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   Tag,
   Trash2,
   Upload,
@@ -81,7 +82,6 @@ export default function BrandProfile() {
   const brand = brands?.find((b) => b._id === brandId) ?? brands?.[0]
 
   const assets = useQuery(api.brandAssets.list, brand ? { brandId: brand._id } : 'skip')
-  const setKeywords = useMutation(api.brands.setKeywords)
   const setAllowlist = useMutation(api.brands.setAllowlist)
 
   const handleCrawl = async () => {
@@ -249,9 +249,7 @@ export default function BrandProfile() {
 
           {tab === 'overview' && <OverviewTab brand={brand} assetCount={assets?.length ?? 0} />}
           {tab === 'assets' && <AssetsTab brandId={brand._id} assets={assets} />}
-          {tab === 'keywords' && (
-            <KeywordsTab brand={brand} onSave={(keywords) => setKeywords({ brandId: brand._id, keywords })} />
-          )}
+          {tab === 'keywords' && <KeywordsTab brand={brand} />}
           {tab === 'allowlist' && (
             <AllowlistTab brand={brand} onSave={(domains) => setAllowlist({ brandId: brand._id, domains })} />
           )}
@@ -656,88 +654,338 @@ function AssetsTab({
   )
 }
 
-function KeywordsTab({
-  brand,
-  onSave,
-}: {
-  brand: Doc<'brands'>
-  onSave: (keywords: string[]) => Promise<unknown>
-}) {
+const KEYWORD_CATEGORY_META: Record<string, { label: string; tone: string }> = {
+  brand: { label: 'Brand', tone: 'bg-blue-50 text-blue-700' },
+  product: { label: 'Product', tone: 'bg-emerald-50 text-emerald-700' },
+  variant: { label: 'Variant', tone: 'bg-violet-50 text-violet-700' },
+  misspelling: { label: 'Misspelling', tone: 'bg-amber-50 text-amber-700' },
+  marketplace: { label: 'Marketplace', tone: 'bg-rose-50 text-rose-700' },
+  custom: { label: 'Custom', tone: 'bg-neutral-100 text-neutral-600' },
+}
+
+function KeywordCategoryChip({ category }: { category: string }) {
+  const meta = KEYWORD_CATEGORY_META[category] ?? KEYWORD_CATEGORY_META.custom
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${meta.tone}`}>
+      {meta.label}
+    </span>
+  )
+}
+
+function KeywordsTab({ brand }: { brand: Doc<'brands'> }) {
   const toast = useToast()
-  const [keywords, setKeywords] = useState<string[]>(brand.keywords ?? [])
+  const grouped = useQuery(api.keywords.listForBrand, { brandId: brand._id })
+  const addKeyword = useMutation(api.keywords.addKeyword)
+  const bulkAdd = useMutation(api.keywords.bulkAdd)
+  const setStatus = useMutation(api.keywords.setStatus)
+  const bulkSetStatus = useMutation(api.keywords.bulkSetStatus)
+  const bulkRemove = useMutation(api.keywords.bulkRemove)
+  const regenerate = useAction(api.keywords.regenerate)
+
   const [input, setInput] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkText, setBulkText] = useState('')
+  const [selection, setSelection] = useState<Set<string>>(new Set())
+  const [busy, setBusy] = useState<string | null>(null)
 
-  useEffect(() => {
-    setKeywords(brand.keywords ?? [])
-  }, [brand._id, brand.keywords])
+  const suggested = grouped?.suggested ?? []
+  const active = grouped?.active ?? []
+  const inactive = grouped?.inactive ?? []
+  const allManaged = [...active, ...inactive]
+  const topHits = Math.max(0, ...active.map((k) => k.hits ?? 0))
 
-  const add = () => {
-    const k = input.trim()
-    if (k && !keywords.includes(k)) setKeywords([...keywords, k])
-    setInput('')
-  }
-
-  const save = async () => {
-    setSaving(true)
+  const run = async (key: string, fn: () => Promise<unknown>, ok?: string) => {
+    setBusy(key)
     try {
-      await onSave(keywords)
-      toast.success('Keywords saved — patrols will use them')
+      await fn()
+      if (ok) toast.success(ok)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Save failed')
+      toast.error(e instanceof Error ? e.message : 'Action failed')
     } finally {
-      setSaving(false)
+      setBusy(null)
     }
   }
 
-  const defaults = [brand.name, `${brand.name} official`, `${brand.name} sale`]
+  const add = () =>
+    run('add', async () => {
+      await addKeyword({ brandId: brand._id, term: input })
+      setInput('')
+    })
 
-  return (
-    <div className="max-w-2xl">
-      <section className="app-panel p-5">
-        <h3 className="font-semibold text-sm mb-1">Patrol keywords</h3>
-        <p className="text-xs text-neutral-500 mb-4">
-          Patrols search these queries instead of the defaults
-          {keywords.length === 0 && ` (${defaults.join(', ')})`}.
-        </p>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {keywords.map((k) => (
-            <span
-              key={k}
-              className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 bg-neutral-100 rounded-full text-sm"
-            >
-              {k}
-              <button
-                onClick={() => setKeywords(keywords.filter((x) => x !== k))}
-                className="p-0.5 hover:bg-neutral-200 rounded-full"
-                aria-label={`Remove ${k}`}
-              >
-                <X className="w-3 h-3" />
-              </button>
+  const submitBulk = () =>
+    run('bulk', async () => {
+      const terms = bulkText
+        .split(/\r?\n/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+      const res = (await bulkAdd({ brandId: brand._id, terms })) as { added: number }
+      setBulkOpen(false)
+      setBulkText('')
+      toast.success(`${res.added} keyword${res.added === 1 ? '' : 's'} added`)
+    })
+
+  const toggleSel = (id: string, checked: boolean) =>
+    setSelection((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+
+  const allSelected = allManaged.length > 0 && allManaged.every((k) => selection.has(k._id))
+
+  const keywordRow = (k: Doc<'brandKeywords'>, paused: boolean) => (
+    <div
+      key={k._id}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border ${
+        selection.has(k._id) ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200'
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={selection.has(k._id)}
+        onChange={(e) => toggleSel(k._id, e.target.checked)}
+        className="w-3.5 h-3.5 rounded border-neutral-300 accent-neutral-900 shrink-0"
+        aria-label={`Select ${k.term}`}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate">{k.term}</span>
+          {!paused && (k.hits ?? 0) > 0 && (k.hits ?? 0) === topHits && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
+              Top performer
             </span>
-          ))}
-          {keywords.length === 0 && (
-            <span className="text-sm text-neutral-400 py-1.5">Using default queries</span>
           )}
         </div>
+        {k.rationale && <div className="text-[11px] text-neutral-500 truncate">{k.rationale}</div>}
+      </div>
+      <KeywordCategoryChip category={k.category} />
+      <span
+        className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+          k.source === 'ai' ? 'bg-violet-50 text-violet-700' : 'bg-neutral-100 text-neutral-500'
+        }`}
+      >
+        {k.source === 'ai' ? 'AI' : 'Manual'}
+      </span>
+      <span className="text-xs text-neutral-500 w-14 text-right" title="Discoveries attributed to this term">
+        {(k.hits ?? 0)} hits
+      </span>
+      <div className="flex items-center gap-1 shrink-0">
+        {paused ? (
+          <button
+            onClick={() => run(k._id, () => setStatus({ keywordId: k._id, status: 'active' }))}
+            disabled={busy === k._id}
+            className="text-[11px] font-medium text-emerald-700 hover:underline"
+          >
+            Resume
+          </button>
+        ) : (
+          <button
+            onClick={() => run(k._id, () => setStatus({ keywordId: k._id, status: 'inactive' }))}
+            disabled={busy === k._id}
+            className="text-[11px] font-medium text-neutral-500 hover:underline"
+          >
+            Pause
+          </button>
+        )}
+        <button
+          onClick={() => run(k._id, () => bulkRemove({ keywordIds: [k._id] }))}
+          disabled={busy === k._id}
+          className="p-1 text-neutral-400 hover:text-rose-600"
+          aria-label={`Remove ${k.term}`}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  )
+
+  if (grouped === undefined) {
+    return <p className="text-sm text-neutral-500 py-8 text-center">Loading keywords…</p>
+  }
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <section className="app-panel p-5">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 className="font-semibold text-sm mb-1">Monitored keywords</h3>
+            <p className="text-xs text-neutral-500">
+              Active terms feed patrol queries. AI suggestions arrive after each crawl — Track the
+              useful ones, Dismiss the rest.
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              run('regen', () => regenerate({ brandId: brand._id }), 'Generating suggestions…')
+            }
+            disabled={busy !== null}
+            className="btn-secondary !py-1.5 text-xs shrink-0"
+            title="Generate keyword suggestions from crawled brand content"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {busy === 'regen' ? 'Queuing…' : 'AI suggestions'}
+          </button>
+        </div>
+
         <div className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && add()}
-            placeholder={`e.g. "${brand.name} backpack"`}
+            onKeyDown={(e) => e.key === 'Enter' && input.trim() && add()}
+            placeholder={`e.g. "${brand.name.toLowerCase()} backpack"`}
             className="input-field flex-1"
           />
-          <button onClick={add} disabled={!input.trim()} className="btn-secondary">
+          <button onClick={add} disabled={!input.trim() || busy !== null} className="btn-primary !py-2">
             Add
           </button>
-        </div>
-        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-neutral-100">
-          <button onClick={save} disabled={saving} className="btn-primary">
-            {saving ? 'Saving…' : 'Save keywords'}
+          <button onClick={() => setBulkOpen(true)} className="btn-secondary">
+            Bulk add
           </button>
         </div>
       </section>
+
+      {suggested.length > 0 && (
+        <section className="app-panel p-5">
+          <h3 className="font-semibold text-sm mb-1">
+            Suggested <span className="text-neutral-400 font-normal">({suggested.length})</span>
+          </h3>
+          <p className="text-xs text-neutral-500 mb-3">
+            Proposed from your crawled brand content — nothing runs until you Track it.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {suggested.map((k) => (
+              <div key={k._id} className="border border-neutral-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium truncate flex-1">{k.term}</span>
+                  <KeywordCategoryChip category={k.category} />
+                </div>
+                {k.rationale && (
+                  <p className="text-[11px] text-neutral-500 mb-2 line-clamp-2">{k.rationale}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() =>
+                      run(k._id, () => setStatus({ keywordId: k._id, status: 'active' }))
+                    }
+                    disabled={busy === k._id}
+                    className="btn-primary !py-1 !px-3 text-xs"
+                  >
+                    Track
+                  </button>
+                  <button
+                    onClick={() =>
+                      run(k._id, () => setStatus({ keywordId: k._id, status: 'rejected' }))
+                    }
+                    disabled={busy === k._id}
+                    className="btn-secondary !py-1 !px-3 text-xs"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="app-panel p-5">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="font-semibold text-sm">
+            Active <span className="text-neutral-400 font-normal">({active.length})</span>
+          </h3>
+          <div className="flex items-center gap-3">
+            {selection.size > 0 && (
+              <>
+                <button
+                  onClick={() =>
+                    run(
+                      'bulk',
+                      () =>
+                        bulkSetStatus({
+                          keywordIds: [...selection] as Id<'brandKeywords'>[],
+                          status: 'inactive',
+                        }),
+                    ).then(() => setSelection(new Set()))
+                  }
+                  className="text-xs font-medium text-neutral-600 hover:underline"
+                >
+                  Pause {selection.size}
+                </button>
+                <button
+                  onClick={() =>
+                    run('bulk', () =>
+                      bulkRemove({ keywordIds: [...selection] as Id<'brandKeywords'>[] }),
+                    ).then(() => setSelection(new Set()))
+                  }
+                  className="text-xs font-medium text-rose-600 hover:underline"
+                >
+                  Remove {selection.size}
+                </button>
+              </>
+            )}
+            <label className="flex items-center gap-1.5 text-xs text-neutral-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={() =>
+                  setSelection(allSelected ? new Set() : new Set(allManaged.map((k) => k._id)))
+                }
+                className="w-3.5 h-3.5 rounded border-neutral-300 accent-neutral-900"
+              />
+              All
+            </label>
+          </div>
+        </div>
+
+        {active.length === 0 ? (
+          <div className="text-sm text-neutral-500 py-6 text-center border border-dashed border-neutral-200 rounded-lg">
+            {suggested.length > 0
+              ? 'No active keywords yet — Track suggestions above or add your own.'
+              : `No active keywords — patrols fall back to defaults (${[brand.name, `${brand.name} official`, `${brand.name} sale`].join(', ')}).`}
+          </div>
+        ) : (
+          <div className="space-y-1.5">{active.map((k) => keywordRow(k, false))}</div>
+        )}
+      </section>
+
+      {inactive.length > 0 && (
+        <section className="app-panel p-5">
+          <h3 className="font-semibold text-sm mb-3">
+            Paused <span className="text-neutral-400 font-normal">({inactive.length})</span>
+          </h3>
+          <div className="space-y-1.5">{inactive.map((k) => keywordRow(k, true))}</div>
+        </section>
+      )}
+
+      <Modal
+        open={bulkOpen}
+        title="Bulk add keywords"
+        onClose={() => setBulkOpen(false)}
+        footer={
+          <>
+            <button onClick={() => setBulkOpen(false)} className="btn-secondary">
+              Cancel
+            </button>
+            <button
+              onClick={submitBulk}
+              disabled={!bulkText.trim() || busy === 'bulk'}
+              className="btn-primary"
+            >
+              {busy === 'bulk' ? 'Adding…' : 'Add all'}
+            </button>
+          </>
+        }
+      >
+        <p className="text-xs text-neutral-500 mb-2">One keyword per line — duplicates are skipped.</p>
+        <textarea
+          value={bulkText}
+          onChange={(e) => setBulkText(e.target.value)}
+          rows={8}
+          placeholder={`${brand.name.toLowerCase()} duffel\n${brand.name.toLowerCase()} dupe\n${brand.name.toLowerCase()} wholesale`}
+          className="input-field w-full font-mono text-xs"
+        />
+      </Modal>
     </div>
   )
 }

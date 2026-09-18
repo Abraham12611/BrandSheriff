@@ -345,6 +345,7 @@ export const createFromPatrol = internalMutation({
     status: v.string(),
     platformGuess: v.optional(v.string()),
     source: v.optional(v.string()),
+    matchedQuery: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("discoveries", {
@@ -357,7 +358,25 @@ export const createFromPatrol = internalMutation({
       status: args.status,
       platformGuess: args.platformGuess,
       source: args.source,
+      matchedQuery: args.matchedQuery,
     });
+    // Attribute the hit to the keyword that produced it — powers the
+    // per-term performance stats on the keywords page.
+    if (args.matchedQuery) {
+      const norm = args.matchedQuery.trim().replace(/\s+/g, " ").toLowerCase();
+      const rows = await ctx.db
+        .query("brandKeywords")
+        .withIndex("by_brand", (q) => q.eq("brandId", args.brandId))
+        .collect();
+      const kw = rows.find(
+        (k) => k.term.trim().replace(/\s+/g, " ").toLowerCase() === norm,
+      );
+      if (kw) {
+        await ctx.db.patch("brandKeywords", kw._id, {
+          hits: (kw.hits ?? 0) + 1,
+        });
+      }
+    }
   },
 });
 
