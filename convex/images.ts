@@ -146,6 +146,14 @@ export const scoreSuspectImages = internalAction({
       matchedAssetId: best.score >= MATCH_FLOOR ? best.assetId : undefined,
       suspectImageFileId: best.score >= MATCH_FLOOR ? best.fileId : undefined,
     });
+
+    // High-confidence image theft → alert workspace members via AgentMail.
+    if (best.score >= 0.8) {
+      await ctx.scheduler.runAfter(0, internal.mailAlerts.notifyDiscovery, {
+        discoveryId: args.discoveryId,
+        reason: "visual_match",
+      });
+    }
   },
 });
 

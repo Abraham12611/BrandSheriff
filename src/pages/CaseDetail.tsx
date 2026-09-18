@@ -28,6 +28,7 @@ import { useToast } from '../components/Toasts'
 import Loading from '../components/Loading'
 import Modal from '../components/Modal'
 import { PlatformChip } from '../components/discoveries/CompareCard'
+import RoutesPanel from '../components/enforcement/RoutesPanel'
 
 type TabKey = 'details' | 'activity' | 'enforcement'
 
@@ -708,9 +709,10 @@ export default function CaseDetail() {
 
           {tab === 'enforcement' && (
             <>
+              <RoutesPanel caseId={c._id} />
               <section className="app-panel p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold">Enforcement draft</h2>
+                  <h2 className="font-semibold">Cease &amp; desist draft</h2>
                   {draft && <Badge label={draft.status} tone={STATE_STYLE[draft.status]} />}
                 </div>
                 {draft ? (

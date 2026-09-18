@@ -288,3 +288,96 @@ export const listByOrganization = query({
       .collect();
   },
 });
+
+/** Members joined with their user record (name/email) for the People page. */
+export const listWithUsers = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx: any, args) => {
+    await requireOrganizationMembership(ctx, args.organizationId);
+    const members = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_org", (q: any) => q.eq("organizationId", args.organizationId))
+      .collect();
+    const out = [];
+    for (const m of members) {
+      if (m.status !== "active") continue;
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", m.userId))
+        .first();
+      out.push({
+        _id: m._id,
+        userId: m.userId,
+        role: m.role,
+        status: m.status,
+        notificationPrefs: m.notificationPrefs ?? {},
+        createdAt: m.createdAt,
+        email: user?.email ?? null,
+        name: user?.name ?? null,
+        imageUrl: user?.imageUrl ?? null,
+      });
+    }
+    return out;
+  },
+});
+
+/** Per-member alert opt-out — any member can update their own prefs. */
+export const updateNotificationPrefs = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    prefs: v.record(v.string(), v.boolean()),
+  },
+  handler: async (ctx: any, args) => {
+    const { membership } = await requireOrganizationMembership(ctx, args.organizationId);
+    await ctx.db.patch(membership._id, {
+      notificationPrefs: args.prefs,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const listPendingInvitations = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx: any, args) => {
+    await requireOrganizationMembership(ctx, args.organizationId);
+    const rows = await ctx.db
+      .query("invitations")
+      .withIndex("by_org", (q: any) => q.eq("organizationId", args.organizationId))
+      .collect();
+    return rows
+      .filter((i: any) => i.status === "pending")
+      .map((i: any) => ({
+        _id: i._id,
+        email: i.email,
+        role: i.role,
+        createdAt: i.createdAt,
+        expiresAt: i.expiresAt,
+      }));
+  },
+});
+
+export const revokeInvitation = mutation({
+  args: { organizationId: v.id("organizations"), invitationId: v.id("invitations") },
+  handler: async (ctx: any, args) => {
+    const { identity } = await requireOrganizationMembership(
+      ctx,
+      args.organizationId,
+      ADMIN_ROLES,
+    );
+    const invite = await ctx.db.get("invitations", args.invitationId);
+    if (!invite || invite.organizationId !== args.organizationId) {
+      throw new Error("Invitation not found.");
+    }
+    await ctx.db.patch(args.invitationId, { status: "revoked" });
+    await ctx.db.insert("auditEvents", {
+      organizationId: args.organizationId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "revoked",
+      entityType: "invitation",
+      entityId: args.invitationId,
+      timestamp: Date.now(),
+      metadataSafe: { email: invite.email },
+    });
+  },
+});

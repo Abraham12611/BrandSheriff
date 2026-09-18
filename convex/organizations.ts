@@ -153,3 +153,43 @@ export const enableProviderActions = mutation({
     return { alreadyEnabled: false };
   },
 });
+
+/** Workspace settings — name, default severity, alert routing. Admin-gated. */
+export const updateSettings = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    name: v.optional(v.string()),
+    settings: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { identity, membership } = await requireOrganizationMembership(
+      ctx,
+      args.organizationId,
+      ADMIN_ROLES,
+    );
+    const org = await ctx.db.get(args.organizationId);
+    if (!org) throw new Error("Workspace not found");
+
+    const patch: Record<string, unknown> = { updatedAt: Date.now() };
+    if (args.name !== undefined) {
+      const trimmed = args.name.trim();
+      if (!trimmed) throw new Error("Workspace name cannot be empty.");
+      patch.name = trimmed;
+    }
+    if (args.settings !== undefined) {
+      patch.settings = { ...(org.settings ?? {}), ...args.settings };
+    }
+    await ctx.db.patch(args.organizationId, patch);
+
+    await ctx.db.insert("auditEvents", {
+      organizationId: args.organizationId,
+      actorType: "user",
+      actorId: identity.subject,
+      eventType: "settings_updated",
+      entityType: "organization",
+      entityId: args.organizationId,
+      timestamp: Date.now(),
+      metadataSafe: { role: membership.role },
+    });
+  },
+});

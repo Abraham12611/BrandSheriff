@@ -8,6 +8,9 @@ import BrandProfile from './pages/BrandProfile'
 import Discoveries from './pages/Discoveries'
 import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
+import Enforcement from './pages/Enforcement'
+import People from './pages/People'
+import Settings from './pages/Settings'
 import Analytics from './pages/Analytics'
 import Reports from './pages/Reports'
 import ReportView from './pages/ReportView'
@@ -78,6 +81,30 @@ export function AppRoutes() {
               element={
                 <WorkspaceRequired>
                   <CaseDetail />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/enforcement"
+              element={
+                <WorkspaceRequired>
+                  <Enforcement />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/people"
+              element={
+                <WorkspaceRequired>
+                  <People />
+                </WorkspaceRequired>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <WorkspaceRequired>
+                  <Settings />
                 </WorkspaceRequired>
               }
             />

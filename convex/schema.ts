@@ -159,6 +159,7 @@ export default defineSchema({
     suspectImageFileId: v.optional(v.string()),
     source: v.optional(v.string()),
     matchedQuery: v.optional(v.string()),
+    alertSentAt: v.optional(v.number()),
     priority: v.optional(v.string()),
     denialReason: v.optional(v.string()),
     reviewedBy: v.optional(v.string()),
@@ -194,6 +195,30 @@ export default defineSchema({
     .index("by_org_state", ["organizationId", "state"])
     .index("by_brand_state", ["brandId", "state"])
     .index("by_case_number", ["caseNumber"]),
+
+  // One row per recommended enforcement channel for a case — the
+  // "attack it from several directions" model. Each row tracks a
+  // platform-native complaint through its own lifecycle.
+  enforcementActions: defineTable({
+    organizationId: v.id("organizations"),
+    caseId: v.id("cases"),
+    route: v.string(), // channel the complaint goes to (see routes.ts)
+    channel: v.string(), // storefront_platform | host | registrar | search | ads | social | marketplace | counsel
+    basis: v.string(), // copyright | trademark | counterfeit | impersonation | udrp | design
+    status: v.string(), // recommended | prepared | submitted | platform_reviewing | actioned | rejected | counter_notice | withdrawn
+    confidence: v.string(), // high | medium | low
+    reason: v.string(),
+    submissionUrl: v.optional(v.string()),
+    requiredFields: v.optional(v.array(v.string())),
+    draftId: v.optional(v.id("draftNotices")),
+    submittedAt: v.optional(v.number()),
+    externalRef: v.optional(v.string()),
+    outcome: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_case", ["caseId"])
+    .index("by_org_status", ["organizationId", "status"])
+    .index("by_case_route", ["caseId", "route"]),
 
   evidenceItems: defineTable({
     organizationId: v.id("organizations"),

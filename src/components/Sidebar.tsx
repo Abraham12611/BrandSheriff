@@ -12,6 +12,9 @@ import {
   Menu,
   X,
   Shield,
+  Gavel,
+  Users,
+  Settings,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
@@ -47,6 +50,7 @@ export default function Sidebar() {
   const activityItems: NavItem[] = [
     { to: '/discoveries', label: 'Discoveries', icon: Radar, badge: needsReview },
     { to: '/cases', label: 'Cases', icon: Briefcase },
+    { to: '/enforcement', label: 'Enforcement', icon: Gavel },
   ]
   const brandItems: NavItem[] = [
     { to: '/brand', label: 'Brand Profile', icon: Fingerprint },
@@ -54,6 +58,10 @@ export default function Sidebar() {
   const dataItems: NavItem[] = [
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
     { to: '/reports', label: 'Reports', icon: FileText },
+  ]
+  const workspaceItems: NavItem[] = [
+    { to: '/people', label: 'People', icon: Users },
+    { to: '/settings', label: 'Settings', icon: Settings },
   ]
 
   const renderItem = (item: NavItem) => (
@@ -126,6 +134,7 @@ export default function Sidebar() {
           <NavSection label="Activity">{activityItems.map(renderItem)}</NavSection>
           <NavSection label="Brand">{brandItems.map(renderItem)}</NavSection>
           <NavSection label="Data">{dataItems.map(renderItem)}</NavSection>
+          <NavSection label="Workspace">{workspaceItems.map(renderItem)}</NavSection>
         </nav>
 
         <div className="p-3 border-t border-neutral-800/60">
