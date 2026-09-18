@@ -121,10 +121,31 @@ export const listForInbox = query({
         .collect();
       all.push(...rows);
     }
-    return all
+    const rows = all
       .filter((d) => (!args.brandId || d.brandId === args.brandId) && (!args.status || d.status === args.status))
       .sort((a, b) => b._creationTime - a._creationTime)
       .slice(0, INBOX_LIMIT);
+
+    // Resolve storage URLs for visual-match pairs so cards can render the
+    // real brand image next to the suspect's copy.
+    return await Promise.all(
+      rows.map(async (d) => {
+        let matchedAssetUrl: string | null = null;
+        if (d.matchedAssetId) {
+          const asset = await ctx.db.get("brandAssets", d.matchedAssetId);
+          if (asset?.fileId) {
+            matchedAssetUrl = await ctx.storage.getUrl(asset.fileId as Id<"_storage">);
+          }
+        }
+        return {
+          ...d,
+          suspectImageUrl: d.suspectImageFileId
+            ? await ctx.storage.getUrl(d.suspectImageFileId as Id<"_storage">)
+            : null,
+          matchedAssetUrl,
+        };
+      }),
+    );
   },
 });
 
@@ -336,6 +357,22 @@ export const createFromPatrol = internalMutation({
       status: args.status,
       platformGuess: args.platformGuess,
       source: args.source,
+    });
+  },
+});
+
+export const setVisualMatch = internalMutation({
+  args: {
+    discoveryId: v.id("discoveries"),
+    visualMatchScore: v.number(),
+    matchedAssetId: v.optional(v.id("brandAssets")),
+    suspectImageFileId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch("discoveries", args.discoveryId, {
+      visualMatchScore: args.visualMatchScore,
+      matchedAssetId: args.matchedAssetId,
+      suspectImageFileId: args.suspectImageFileId,
     });
   },
 });

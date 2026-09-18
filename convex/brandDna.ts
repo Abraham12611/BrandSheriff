@@ -4,6 +4,7 @@ import { components, internal } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import type { CrawledPage, CrawlCompletePayload } from "@firecrawl/firecrawl-convex";
 import { assertProviderActionsEnabled } from "./providerSafety";
+import { imageUrlsFromMarkdown } from "./images";
 import type { Doc } from "./_generated/dataModel";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
@@ -100,6 +101,7 @@ export const ingestCrawl = internalAction({
 
     let cursor: string | null = null;
     let stored = 0;
+    const imageUrls = new Set<string>();
     do {
       // The client's listPages types ctx as its own query ctx; ActionCtx is
       // the same object at runtime (runQuery without the options parameter).
@@ -119,9 +121,21 @@ export const ingestCrawl = internalAction({
           links: [],
         });
         stored++;
+        for (const u of imageUrlsFromMarkdown(p.markdown ?? "")) {
+          if (imageUrls.size < 12) imageUrls.add(u);
+        }
       }
       cursor = page.isDone ? null : page.continueCursor;
     } while (cursor);
+
+    // Index the brand's own imagery for visual matching — each becomes a
+    // monitored "image" asset carrying a perceptual hash.
+    for (const u of imageUrls) {
+      await ctx.scheduler.runAfter(0, internal.images.indexBrandImage, {
+        brandId: args.brandId,
+        imageUrl: u,
+      });
+    }
 
     await ctx.runMutation(internal.brands.updateStatus, {
       brandId: args.brandId,

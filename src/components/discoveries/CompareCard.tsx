@@ -162,7 +162,10 @@ export default function CompareCard({
   onAction,
   busy,
 }: {
-  discovery: Doc<'discoveries'>
+  discovery: Doc<'discoveries'> & {
+    suspectImageUrl?: string | null
+    matchedAssetUrl?: string | null
+  }
   brandName: string
   selected: boolean
   onSelect: (checked: boolean) => void
@@ -172,6 +175,8 @@ export default function CompareCard({
   const [copied, setCopied] = useState(false)
   const similarity = discovery.similarityScore ?? discovery.matchConfidence
   const similarityPct = similarity !== undefined ? Math.round(similarity * 100) : null
+  const visualPct =
+    discovery.visualMatchScore !== undefined ? Math.round(discovery.visualMatchScore * 100) : null
   const status = discovery.status
   const host = hostOf(discovery.canonicalUrl)
 
@@ -226,10 +231,19 @@ export default function CompareCard({
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div className="flex flex-col items-center gap-1.5">
-          <div className="w-full aspect-[4/3] bg-neutral-900 rounded-lg flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">
-              {brandName.charAt(0).toUpperCase()}
-            </span>
+          <div className="w-full aspect-[4/3] bg-neutral-900 rounded-lg flex items-center justify-center overflow-hidden">
+            {discovery.matchedAssetUrl ? (
+              <img
+                src={discovery.matchedAssetUrl}
+                alt={`${brandName} asset`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <span className="text-2xl font-bold text-white">
+                {brandName.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
           <span className="text-[11px] text-neutral-500 font-medium">Your brand</span>
         </div>
@@ -237,8 +251,17 @@ export default function CompareCard({
           →
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <div className="w-full aspect-[4/3]">
-            <SuspectThumbnail url={discovery.canonicalUrl} />
+          <div className="w-full aspect-[4/3] bg-neutral-100 rounded-lg overflow-hidden">
+            {discovery.suspectImageUrl ? (
+              <img
+                src={discovery.suspectImageUrl}
+                alt="Suspect page imagery"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <SuspectThumbnail url={discovery.canonicalUrl} />
+            )}
           </div>
           <span className="text-[11px] text-neutral-500 font-medium">Potential copycat</span>
         </div>
@@ -248,6 +271,13 @@ export default function CompareCard({
         <MetaRow label="Similarity">
           <span className={similarityTone}>{similarityPct !== null ? `${similarityPct}%` : '—'}</span>
         </MetaRow>
+        {visualPct !== null && (
+          <MetaRow label="Visual match">
+            <span className={visualPct >= 85 ? 'text-rose-600 font-semibold' : visualPct >= 55 ? 'text-amber-600' : 'text-neutral-500'}>
+              {visualPct}%
+            </span>
+          </MetaRow>
+        )}
         <MetaRow label="Platform">
           <PlatformChip platform={discovery.platformGuess} />
         </MetaRow>

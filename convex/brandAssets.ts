@@ -7,6 +7,7 @@ import {
   type MutationCtx,
 } from "./_generated/server";
 import { ConvexError } from "convex/values";
+import { internal } from "./_generated/api";
 import { requireBrandAccess, requireOrganizationMembership } from "./lib/authz";
 import type { Id } from "./_generated/dataModel";
 
@@ -63,15 +64,27 @@ export const createDocument = mutation({
   },
   handler: async (ctx, args) => {
     const { brand } = await requireBrandAccess(ctx, args.brandId);
+    const ct = args.contentType ?? "";
+    const type = ct.startsWith("image/")
+      ? "image"
+      : ct.startsWith("video/")
+        ? "video"
+        : "document";
     const assetId = await ctx.db.insert("brandAssets", {
       organizationId: brand.organizationId,
       brandId: args.brandId,
-      type: "document",
+      type,
       title: args.title,
       fileId: args.fileId,
       status: "active",
-      monitorEnabled: false,
+      monitorEnabled: type === "image",
     });
+    if (type === "image") {
+      await ctx.scheduler.runAfter(0, internal.images.indexUploadedImage, {
+        assetId,
+        fileId: args.fileId,
+      });
+    }
     return assetId;
   },
 });

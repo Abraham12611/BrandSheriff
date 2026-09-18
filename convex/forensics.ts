@@ -110,6 +110,12 @@ Do not make a legal determination. Use cautious language like "appears", "likely
       capturedAt: Date.now(),
     });
 
+    // Visual pass runs async — hash the suspect page's images and compare
+    // against the brand's monitored imagery.
+    await ctx.scheduler.runAfter(0, internal.images.scoreSuspectImages, {
+      discoveryId: args.discoveryId,
+    });
+
     return analysis;
   },
 });

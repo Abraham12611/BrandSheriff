@@ -7,6 +7,7 @@ import {
   Globe,
   Image,
   Link2,
+  Video,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -38,6 +39,7 @@ const ASSET_TYPE_META: Record<string, { label: string; icon: React.ReactNode; to
   page: { label: 'Page', icon: <Globe className="w-4 h-4" />, tone: 'bg-blue-50 text-blue-700' },
   link: { label: 'Link', icon: <Link2 className="w-4 h-4" />, tone: 'bg-neutral-100 text-neutral-600' },
   image: { label: 'Image', icon: <Image className="w-4 h-4" />, tone: 'bg-emerald-50 text-emerald-700' },
+  video: { label: 'Video', icon: <Video className="w-4 h-4" />, tone: 'bg-cyan-50 text-cyan-700' },
   logo: { label: 'Logo', icon: <Image className="w-4 h-4" />, tone: 'bg-amber-50 text-amber-700' },
   document: { label: 'Doc', icon: <FileText className="w-4 h-4" />, tone: 'bg-purple-50 text-purple-700' },
 }
@@ -460,7 +462,7 @@ function AssetsTab({
               type="file"
               className="hidden"
               disabled={uploading}
-              accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt"
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.mp4,.webm,.mov,.doc,.docx,.txt"
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 if (f) handleUpload(f)
@@ -510,9 +512,26 @@ function AssetsTab({
                     className="mt-1 w-3.5 h-3.5 rounded border-neutral-300 accent-neutral-900"
                     aria-label={`Select ${asset.title}`}
                   />
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${meta.tone}`}>
-                    {meta.icon}
-                  </div>
+                  {asset.type === 'image' && asset.fileUrl ? (
+                    <img
+                      src={asset.fileUrl}
+                      alt={asset.title}
+                      loading="lazy"
+                      className="w-9 h-9 rounded-lg object-cover shrink-0"
+                    />
+                  ) : asset.type === 'video' && asset.fileUrl ? (
+                    <video
+                      src={asset.fileUrl}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      className="w-9 h-9 rounded-lg object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${meta.tone}`}>
+                      {meta.icon}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium truncate" title={asset.title}>
                       {asset.title}
