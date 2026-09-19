@@ -19,6 +19,7 @@ import type * as cases from "../cases.js";
 import type * as cloneScore from "../cloneScore.js";
 import type * as contactResearch from "../contactResearch.js";
 import type * as crons from "../crons.js";
+import type * as demoShowcase from "../demoShowcase.js";
 import type * as discoveries from "../discoveries.js";
 import type * as domainVerifications from "../domainVerifications.js";
 import type * as draftNotices from "../draftNotices.js";
@@ -81,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   cloneScore: typeof cloneScore;
   contactResearch: typeof contactResearch;
   crons: typeof crons;
+  demoShowcase: typeof demoShowcase;
   discoveries: typeof discoveries;
   domainVerifications: typeof domainVerifications;
   draftNotices: typeof draftNotices;

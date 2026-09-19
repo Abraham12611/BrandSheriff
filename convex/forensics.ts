@@ -1,10 +1,13 @@
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { env } from "./_generated/server";
 import { components, internal } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import type { Doc } from "./_generated/dataModel";
-import { assertProviderActionsEnabled } from "./providerSafety";
+import type { Id } from "./_generated/dataModel";
+import type { GenericActionCtx } from "convex/server";
+import type { DataModel } from "./_generated/dataModel";
+import { assertProviderActionsEnabled, assertOrgProviderEnabled } from "./providerSafety";
 
 const firecrawl = new FirecrawlClient(components.firecrawl);
 
@@ -45,6 +48,31 @@ export const investigateDiscovery = action({
     if (!discovery) throw new Error("Discovery not found");
 
     await assertProviderActionsEnabled(ctx, discovery.organizationId);
+    return investigate(ctx, discovery);
+  },
+});
+
+// Scheduled/internal callers (seed, crons) have no user identity — the
+// workspace's own provider opt-in flag is the gate, same as crons.
+export const investigateDiscoveryInternal = internalAction({
+  args: { discoveryId: v.id("discoveries") },
+  handler: async (ctx, args) => {
+    const discovery = (await ctx.runQuery(internal.discoveries.getById, {
+      discoveryId: args.discoveryId,
+    })) as Doc<"discoveries"> | null;
+    if (!discovery) throw new Error("Discovery not found");
+
+    await assertOrgProviderEnabled(ctx, discovery.organizationId);
+    return investigate(ctx, discovery);
+  },
+});
+
+async function investigate(
+  ctx: GenericActionCtx<DataModel>,
+  discovery: Doc<"discoveries">,
+) {
+  {
+    const args = { discoveryId: discovery._id as Id<"discoveries"> };
 
     const brand = (await ctx.runQuery(internal.brands.get, { brandId: discovery.brandId })) as Doc<"brands"> | null;
     if (!brand) throw new Error("Brand not found");
@@ -117,5 +145,5 @@ Do not make a legal determination. Use cautious language like "appears", "likely
     });
 
     return analysis;
-  },
-});
+  }
+}

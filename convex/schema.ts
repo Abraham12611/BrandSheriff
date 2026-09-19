@@ -13,13 +13,17 @@ export default defineSchema({
     mailboxPodId: v.optional(v.string()),
     mailboxWebhookId: v.optional(v.string()),
     mailboxProvisionedAt: v.optional(v.number()),
+    // Public showcase workspace — read-only demo data anyone can view at
+    // /showcase. Only the token-gated demo seed may set this; never user data.
+    isPublicDemo: v.optional(v.boolean()),
     settings: v.optional(v.any()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   })
     .index("by_slug", ["slug"])
     .index("by_owner", ["ownerUserId"])
-    .index("by_mailbox", ["mailboxId"]),
+    .index("by_mailbox", ["mailboxId"])
+    .index("by_public_demo", ["isPublicDemo"]),
 
   users: defineTable({
     clerkId: v.string(),

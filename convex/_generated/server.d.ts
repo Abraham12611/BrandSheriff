@@ -33,6 +33,7 @@ type Env = {
   readonly AGENTMAIL_API_KEY: string | undefined;
   readonly AGENTMAIL_WEBHOOK_SECRET: string | undefined;
   readonly CONVEX_SITE_URL: string | undefined;
+  readonly DEMO_SEED_TOKEN: string | undefined;
   readonly FIRECRAWL_API_KEY: string;
   readonly OPENAI_API_KEY: string | undefined;
 };

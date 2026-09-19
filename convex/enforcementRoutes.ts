@@ -23,6 +23,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { env } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { requireOrganizationMembership, ADMIN_ROLES } from "./lib/authz";
 import { assertProviderActionsEnabled } from "./providerSafety";
 
@@ -343,48 +344,67 @@ export const ensureForCase = mutation({
     if (!theCase || theCase.organizationId !== args.organizationId) {
       throw new Error("Case not found");
     }
-    const discovery = theCase.discoveryId ? await ctx.db.get(theCase.discoveryId) : null;
-    const evidence = await ctx.db
-      .query("evidenceItems")
-      .withIndex("by_case", (q) => q.eq("caseId", args.caseId))
-      .collect();
-    const related = await countRelatedDiscoveries(
-      ctx,
-      args.organizationId,
-      suspectHost(discovery),
-    );
-    const recs = computeRoutes({
-      discovery,
-      evidenceCount: evidence.length,
-      hasPriorCases: related > 1,
-    });
-    const existing = await ctx.db
-      .query("enforcementActions")
-      .withIndex("by_case", (q) => q.eq("caseId", args.caseId))
-      .collect();
-    const have = new Set(existing.map((e: any) => e.route));
-    const now = Date.now();
-    let created = 0;
-    for (const r of recs) {
-      if (have.has(r.def.route)) continue;
-      await ctx.db.insert("enforcementActions", {
-        organizationId: args.organizationId,
-        caseId: args.caseId,
-        route: r.def.route,
-        channel: r.def.channel,
-        basis: r.def.basis,
-        status: "recommended",
-        confidence: r.confidence,
-        reason: r.reason,
-        submissionUrl: r.def.submissionUrl,
-        requiredFields: r.def.requiredFields,
-        updatedAt: now,
-      });
-      created++;
-    }
-    return { created, total: existing.length + created };
+    return ensureRoutes(ctx, args.organizationId, args.caseId);
   },
 });
+
+// Scheduled/internal callers (demo seed, future automation) — same body,
+// no user identity available. Exported as internal so it can be runMutation'd.
+export const ensureForCaseInternal = internalMutation({
+  args: { caseId: v.id("cases"), organizationId: v.id("organizations") },
+  handler: async (ctx, args) => ensureRoutes(ctx, args.organizationId, args.caseId),
+});
+
+async function ensureRoutes(
+  ctx: any,
+  organizationId: Id<"organizations">,
+  caseId: Id<"cases">,
+) {
+  const theCase = await ctx.db.get(caseId);
+  if (!theCase || theCase.organizationId !== organizationId) {
+    throw new Error("Case not found");
+  }
+  const discovery = theCase.discoveryId ? await ctx.db.get(theCase.discoveryId) : null;
+  const evidence = await ctx.db
+    .query("evidenceItems")
+    .withIndex("by_case", (q: any) => q.eq("caseId", caseId))
+    .collect();
+  const related = await countRelatedDiscoveries(
+    ctx,
+    organizationId,
+    suspectHost(discovery),
+  );
+  const recs = computeRoutes({
+    discovery,
+    evidenceCount: evidence.length,
+    hasPriorCases: related > 1,
+  });
+  const existing = await ctx.db
+    .query("enforcementActions")
+    .withIndex("by_case", (q: any) => q.eq("caseId", caseId))
+    .collect();
+  const have = new Set(existing.map((e: any) => e.route));
+  const now = Date.now();
+  let created = 0;
+  for (const r of recs) {
+    if (have.has(r.def.route)) continue;
+    await ctx.db.insert("enforcementActions", {
+      organizationId,
+      caseId,
+      route: r.def.route,
+      channel: r.def.channel,
+      basis: r.def.basis,
+      status: "recommended",
+      confidence: r.confidence,
+      reason: r.reason,
+      submissionUrl: r.def.submissionUrl,
+      requiredFields: r.def.requiredFields,
+      updatedAt: now,
+    });
+    created++;
+  }
+  return { created, total: existing.length + created };
+}
 
 export const listForOrganization = query({
   args: { organizationId: v.id("organizations"), status: v.optional(v.string()) },
@@ -471,6 +491,15 @@ export const prepare = action({
 export const getInternal = internalQuery({
   args: { actionId: v.id("enforcementActions") },
   handler: async (ctx, args) => await ctx.db.get(args.actionId),
+});
+
+export const listForCaseInternal = internalQuery({
+  args: { caseId: v.id("cases") },
+  handler: async (ctx, args) =>
+    await ctx.db
+      .query("enforcementActions")
+      .withIndex("by_case", (q) => q.eq("caseId", args.caseId))
+      .collect(),
 });
 
 export const markPreparingInternal = internalMutation({

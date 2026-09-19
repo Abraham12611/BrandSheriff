@@ -29,7 +29,7 @@ export const runSearch = action({
     // without excluding the whole host — demo pages share the site origin.
     const canonical = brand.canonicalDomain.replace(/\/$/, "");
     const canonicalDir = canonical.slice(0, canonical.lastIndexOf("/") + 1);
-    const allowlist = new Set((brand.allowlist ?? []).map((d) => d.toLowerCase()));
+    const allowlist = new Set((brand.allowlist ?? []).map((d: string) => d.toLowerCase()));
     const isSelf = (url: string) =>
       url === canonical || (canonicalDir.length > 0 && url.startsWith(canonicalDir));
     const isAllowed = (url: string) => {

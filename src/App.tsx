@@ -16,6 +16,7 @@ import Networks from './pages/Networks'
 import Analytics from './pages/Analytics'
 import Reports from './pages/Reports'
 import ReportView from './pages/ReportView'
+import Showcase from './pages/Showcase'
 import Landing from './pages/Landing'
 import { WorkspaceProvider } from './lib/workspace'
 import { ToastProvider } from './components/Toasts'
@@ -140,6 +141,8 @@ export default function App() {
       <Routes>
         {/* Public share-link view — no auth, no app shell */}
         <Route path="/report/:token" element={<ReportView />} />
+        {/* Public live demo workspace — read-only, seeded data, no auth */}
+        <Route path="/showcase" element={<Showcase />} />
         {/* Public landing + free scan — redirects authed users to the app */}
         <Route path="/" element={<Landing />} />
         <Route
