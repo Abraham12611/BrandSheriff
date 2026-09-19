@@ -1,66 +1,73 @@
 # BrandSheriff 3-Minute Demo Script
 
-## Setup
+## Links
 
-Open the live app: https://rapid-peccary-734.convex.site
+- **Live app:** https://cautious-elk-17.convex.site
+- **Public live demo (no login):** https://cautious-elk-17.convex.site/showcase
+- **Repo:** https://github.com/Abraham12611/BrandSheriff
 
-## Script
+## For judges — fastest path
 
-### 1. Create a workspace and crawl the demo brand (45s)
+Open `/showcase`. It's a read-only view of a seeded workspace where the real
+pipeline already ran: a live Firecrawl crawl of a controlled storefront,
+suspect-page scrapes, perceptual-hash image matching, OpenAI forensic
+analysis, deterministic clone-risk scoring, enforcement-route computation,
+and OpenAI-drafted platform packets. No mocking — every row was produced by
+the production code path.
 
-- Sign in, then create a workspace (e.g. "Judge Demo").
-- Add a brand named **Northstar Atelier** with official domain `https://<deployment>.convex.site/demo/northstar/index.html`.
-- On **Brand DNA**, click **Enable provider actions** (owner/admin only), then click **Crawl**.
-- This runs a live Firecrawl scrape + map of the official Northstar Atelier storefront and stores pages/links as brand assets.
-- Mention: the storefront is a real static page served on the same `*.convex.site` deployment; Firecrawl crawls it live.
+## Video script (~3 min)
 
-### 2. Run a patrol and create a discovery (45s)
+### 1. Hook (15s)
 
-- Go to **Threat Radar** and click **Run patrol**.
-- The patrol uses Firecrawl search for brand terms like "Northstar Atelier" and "Northstar Atelier sale".
-- New discoveries appear in the review queue.
-- Point out that one discovery is the controlled clone page (`/demo/clone/index.html`).
+- Open `/showcase`. "A brand owner's worst week: someone cloned their store.
+  BrandSheriff found it, scored it, and routed enforcement to five channels —
+  all from the real product."
+- Scroll the discoveries grid — point at the clone's 100/100 clone-risk ring.
 
-### 3. Investigate the clone (45s)
+### 2. Explainable evidence (30s)
 
-- Click **Investigate** on the clone discovery.
-- The action scrapes the suspect URL and sends the page + official assets to OpenAI.
-- The discovery updates with:
-  - Identity similarity score
-  - Authorization risk
-  - Severity
-  - Explanation and counter-signals
-- Emphasize: the AI explains the match but does not make a legal determination.
+- Expand "Why 100/100?" on the clone discovery — walk 2–3 signal rows
+  (exact image re-host, description similarity, domain impersonation pattern).
+- Show the suspect-vs-original image pair: "perceptual-hash match, not vibes."
+- Contrast: the authorized partner scored 47 — signals measure copying, not
+  legality. "Explainable signals, never a legal conclusion."
 
-### 4. Create a case and review evidence (30s)
+### 3. Multi-channel enforcement (45s)
 
-- Click **Create case** from the discovery.
-- Open the case. Show:
-  - Case summary
-  - Original discovery
-  - Evidence locker (page scrape + forensic analysis)
-- Mention evidence carries timestamp and source URL.
+- Case BS-1000: 8 routes — host DMCA, storefront copyright, registrar abuse,
+  Google delisting, ads trademark, marketplace counterfeit, counsel, C&D.
+- Expand a prepared packet — OpenAI drafted channel-native complaint text;
+  unverifiable facts are `[REQUIRED: …]` placeholders, never invented.
+- "The LLM drafts. Deterministic code routes. Humans approve."
 
-### 5. Generate and approve an enforcement draft (45s)
+### 4. The live loop in your own workspace (60s)
 
-- In the case, click **Generate draft**.
-- OpenAI writes a structured email from the confirmed evidence only.
-- Show the editable body and the recipient field.
-- Click **Approve & send**.
-- The system records an approval snapshot and sends via AgentMail.
-- Note: no consequential send happens without explicit approval.
+- Sign in → workspace → Brand DNA → provider actions on → **Crawl** (real
+  Firecrawl crawl of `/demo/northstar/`).
+- Run a patrol → discovery lands → **Investigate** (scrape + OpenAI analysis)
+  → **Create case** → routes auto-compute → **Generate draft** → edit →
+  **Approve & send** — AgentMail sends from the workspace's own mailbox.
+- Show the case inbox: the workspace mailbox provisioned per-org, inbound
+  replies land in the case thread and get classified (acceptance, refusal,
+  counter-notice → auto-escalation).
 
-### 6. Verify the outcome (30s)
+### 5. Persistence (30s)
 
-- Click **Run verification**.
-- Firecrawl re-scrapes the target and OpenAI classifies the result as removed/changed/still_present/inconclusive.
-- The case state transitions automatically.
+- **Run verification** — re-scrapes the target, classifies
+  removed/changed/still_present, transitions the case.
+- **Hydra watch** — keeps the fingerprint under watch; reappearances surface
+  as new discoveries and email alerts to the team.
 
-### 7. Watch for reappearance (15s)
+### Closing (10s)
 
-- Click **Start watching for reappearance**.
-- Explain Hydra: after resolution, the brand fingerprint stays under watch and future reappearances surface as new discoveries.
+> "Discovery to enforcement to verification to rewatch — BrandSheriff is the
+> evidence and operations layer for brand abuse. Convex runs it, Firecrawl
+> feeds it, AgentMail gives it an inbox, OpenAI drafts under human control."
 
-## Closing line
+## Notes for the recording
 
-> BrandSheriff turns brand abuse from a manual guessing game into a live, evidence-based, human-approved workflow — from discovery through verification.
+- Do step 4 in the real workspace (mailbox provisioned); use `/showcase` for
+  steps 1–3 so nothing depends on live latency.
+- Keep `/demo/clone/index.html` open in a second tab to flash the clone site.
+- If a provider call is slow on camera, cut to the showcase equivalent rather
+  than waiting — it's the same data.
