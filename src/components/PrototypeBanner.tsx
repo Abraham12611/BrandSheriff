@@ -1,4 +1,8 @@
+import { useWorkspace } from '../lib/workspace'
+
 export default function PrototypeBanner() {
+  const { providerActionsEnabled } = useWorkspace()
+  if (providerActionsEnabled) return null
   return (
     <div
       role="alert"
