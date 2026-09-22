@@ -12,3 +12,9 @@ convex/_generated/ai
 
 # reference material (kept locally, not committed)
 bustem-ref/
+inspiration/
+llms-agent-mail.txt
+
+# internal planning/working docs (local only)
+/[0-9][0-9]_*.md
+/docs/
