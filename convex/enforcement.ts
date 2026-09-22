@@ -5,6 +5,7 @@ import { env } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { requireCaseAccess, requireDraftAccess } from "./lib/authz";
 import { assertProviderActionsEnabled } from "./providerSafety";
+import { toPlainText } from "./lib/plainText";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const FOLLOWUP_WAIT_MS = 72 * 60 * 60 * 1000;
@@ -60,7 +61,8 @@ Return JSON with:
 - body: full plain-text email body
 - missingFields: array of strings for facts still needed before sending
 - warnings: array of caution notes (e.g., "recipient not verified")
-Use cautious, non-legal language and a professional tone.`;
+Use cautious, non-legal language and a professional tone.
+Format the body as plain text only — no markdown syntax (no **, ##, ---, or - bullets). Use plain section labels ending with a colon and numbered lists where needed.`;
 
     const draft = await openaiChat([
       { role: "system", content: "You are an assistive brand-protection drafting tool. You produce structured email drafts based only on confirmed facts. You never fabricate legal claims, registration numbers, or recipient details." },
@@ -73,7 +75,7 @@ Use cautious, non-legal language and a professional tone.`;
       routeType: "email",
       status: "draft",
       structuredFields: draft,
-      body: String(draft.body ?? ""),
+      body: toPlainText(String(draft.body ?? "")),
       generatedBy: "openai",
     });
 
@@ -93,6 +95,18 @@ export const latestDraft = query({
   },
 });
 
+export const listDrafts = query({
+  args: { caseId: v.id("cases") },
+  handler: async (ctx, args) => {
+    await requireCaseAccess(ctx, args.caseId);
+    const all = await ctx.db
+      .query("draftNotices")
+      .withIndex("by_case", (q) => q.eq("caseId", args.caseId))
+      .collect();
+    return all.sort((a, b) => b._creationTime - a._creationTime);
+  },
+});
+
 export const updateDraft = mutation({
   args: {
     draftId: v.id("draftNotices"),
@@ -106,7 +120,7 @@ export const updateDraft = mutation({
         ? { ...(draft.structuredFields as Record<string, unknown> | undefined), subject: args.subject }
         : draft.structuredFields;
     await ctx.db.patch(args.draftId, {
-      body: args.body,
+      body: toPlainText(args.body),
       structuredFields: structured,
       status: "draft_edited",
       updatedAt: Date.now(),
@@ -152,7 +166,7 @@ export const approveAndSend = action({
       inboxId: org.mailboxId,
       to: args.to,
       subject,
-      text: draft.body,
+      text: toPlainText(draft.body),
     })) as string;
 
     await ctx.runMutation(internal.draftNotices.markSent, {

@@ -26,6 +26,7 @@ import { env } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireOrganizationMembership, ADMIN_ROLES } from "./lib/authz";
 import { assertProviderActionsEnabled } from "./providerSafety";
+import { toPlainText } from "./lib/plainText";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -550,7 +551,8 @@ Write the complaint text appropriate for THIS channel's submission form:
 - Counterfeit channels: focus on the mark and counterfeit nature; do not overclaim.
 - Registrar/UDRP: structure the three UDRP elements as an assessment draft, clearly marked as for counsel review.
 - Counsel escalation: a concise brief summarizing the offender, evidence and prior actions.
-Mark every fact you cannot verify as [REQUIRED: ...] rather than inventing it. No legal conclusions — describe observable facts. Keep it under 500 words, plain text, ready to paste into the platform's form.`;
+Mark every fact you cannot verify as [REQUIRED: ...] rather than inventing it. No legal conclusions — describe observable facts. Keep it under 500 words.
+Format as plain text only — no markdown syntax (no **, ##, ---, or - bullets). Use plain section labels ending with a colon and numbered lists where needed, ready to paste into the platform's form.`;
 
     const text = await openaiText([
       { role: "system", content: "You draft precise, factual platform IP complaints. Never invent registrations, dates or facts — use placeholders." },
@@ -558,7 +560,7 @@ Mark every fact you cannot verify as [REQUIRED: ...] rather than inventing it. N
     ]);
     await ctx.runMutation(internal.enforcementRoutes.attachDraftInternal, {
       actionId: args.actionId,
-      text,
+      text: toPlainText(text),
       label: def?.label ?? row.route,
     });
     return { ok: true };

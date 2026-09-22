@@ -41,6 +41,7 @@ import type * as lib_authz from "../lib/authz.js";
 import type * as lib_firecrawlApi from "../lib/firecrawlApi.js";
 import type * as lib_openai from "../lib/openai.js";
 import type * as lib_phash from "../lib/phash.js";
+import type * as lib_plainText from "../lib/plainText.js";
 import type * as lib_platform from "../lib/platform.js";
 import type * as mail from "../mail.js";
 import type * as mailAlerts from "../mailAlerts.js";
@@ -104,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   "lib/firecrawlApi": typeof lib_firecrawlApi;
   "lib/openai": typeof lib_openai;
   "lib/phash": typeof lib_phash;
+  "lib/plainText": typeof lib_plainText;
   "lib/platform": typeof lib_platform;
   mail: typeof mail;
   mailAlerts: typeof mailAlerts;

@@ -30,6 +30,7 @@ import Modal from '../components/Modal'
 import { PlatformChip } from '../components/discoveries/CompareCard'
 import RoutesPanel from '../components/enforcement/RoutesPanel'
 import SignalsPanel from '../components/enforcement/SignalsPanel'
+import { toPlainText } from '../lib/plainText'
 
 type TabKey = 'details' | 'activity' | 'enforcement'
 
@@ -312,6 +313,22 @@ const EVENT_LABEL: Record<string, string> = {
   evidence_capture_failed: 'Browser capture failed',
 }
 
+const DRAFT_ROUTE_LABEL: Record<string, string> = {
+  email: 'Email notice',
+  cease_desist: 'Cease & desist',
+  host_dmca: 'Host DMCA',
+  storefront_copyright: 'Storefront copyright',
+  search_delisting: 'Search delisting',
+  ads_trademark: 'Ads trademark',
+  ads_counterfeit: 'Ads counterfeit',
+  meta_ip: 'Meta IP',
+  instagram_ip: 'Instagram IP',
+  marketplace_counterfeit: 'Marketplace counterfeit',
+  registrar_abuse: 'Registrar abuse',
+  udrp_assessment: 'UDRP assessment',
+  counsel_escalation: 'Counsel escalation',
+}
+
 export default function CaseDetail() {
   const { id } = useParams<{ id: string }>()
   const caseId = id as Id<'cases'> | undefined
@@ -336,7 +353,12 @@ export default function CaseDetail() {
     api.evidenceItems.listByDiscovery,
     c?.discoveryId ? { discoveryId: c.discoveryId } : 'skip',
   )
-  const draft = useQuery(api.enforcement.latestDraft, caseId ? { caseId } : 'skip')
+  const drafts = useQuery(api.enforcement.listDrafts, caseId ? { caseId } : 'skip')
+  const [selectedDraftId, setSelectedDraftId] = useState<Id<'draftNotices'> | null>(null)
+  const draft = useMemo(
+    () => drafts?.find((d) => d._id === selectedDraftId) ?? drafts?.[0] ?? null,
+    [drafts, selectedDraftId],
+  )
   const rechecks = useQuery(api.verification.list, caseId ? { caseId } : 'skip')
   const watches = useQuery(api.hydra.list, caseId ? { caseId } : 'skip')
   const auditEvents = useQuery(api.auditEvents.listByCase, caseId ? { caseId } : 'skip')
@@ -714,9 +736,32 @@ export default function CaseDetail() {
               <RoutesPanel caseId={c._id} />
               <section className="app-panel p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold">Cease &amp; desist draft</h2>
+                  <h2 className="font-semibold">Enforcement drafts</h2>
                   {draft && <Badge label={draft.status} tone={STATE_STYLE[draft.status]} />}
                 </div>
+                {drafts && drafts.length > 1 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {drafts.map((d) => (
+                      <button
+                        key={d._id}
+                        onClick={() => setSelectedDraftId(d._id)}
+                        className={
+                          d._id === draft?._id
+                            ? 'rounded-full border border-neutral-900 bg-neutral-900 px-2.5 py-1 text-[11px] font-medium text-white'
+                            : 'rounded-full border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-600 hover:border-neutral-400'
+                        }
+                      >
+                        {DRAFT_ROUTE_LABEL[d.routeType] ?? d.routeType}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {draft && (
+                  <p className="text-[11px] text-neutral-500 mb-3">
+                    {DRAFT_ROUTE_LABEL[draft.routeType] ?? draft.routeType}
+                    {draft.generatedBy === 'enforcement_router' && ' · prepared for its enforcement route'}
+                  </p>
+                )}
                 {draft ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -813,12 +858,12 @@ export default function CaseDetail() {
                       </label>
                       <textarea
                         id="draftBody"
-                        value={draft.body ?? ''}
+                        value={toPlainText(draft.body ?? '')}
                         onChange={(e) =>
                           update({ draftId: draft._id, body: e.target.value })
                         }
                         rows={10}
-                        className="input-field mt-1 font-mono text-xs leading-relaxed"
+                        className="input-field mt-1 text-xs leading-relaxed"
                       />
                     </div>
                     {draftWarnings.length > 0 && (
@@ -1296,7 +1341,7 @@ export default function CaseDetail() {
           </div>
           <div className="rounded-lg border border-neutral-100 p-3 max-h-48 overflow-y-auto">
             <pre className="text-xs text-neutral-700 whitespace-pre-wrap font-sans">
-              {draft?.body}
+              {toPlainText(draft?.body ?? '')}
             </pre>
           </div>
           {draftWarnings.length > 0 && (
