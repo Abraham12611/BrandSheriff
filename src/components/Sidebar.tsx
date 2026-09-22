@@ -11,7 +11,6 @@ import {
   Plus,
   Menu,
   X,
-  Shield,
   Gavel,
   Users,
   Settings,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
+import BrandMark from './BrandMark'
 
 type NavItem = {
   to: string
@@ -119,9 +119,7 @@ export default function Sidebar() {
       >
         <div className="px-5 h-14 border-b border-neutral-800/60 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
-              <Shield className="w-4 h-4 text-neutral-900" />
-            </div>
+            <BrandMark />
             <span className="font-semibold text-[15px] tracking-tight">BrandSheriff</span>
           </div>
           <button

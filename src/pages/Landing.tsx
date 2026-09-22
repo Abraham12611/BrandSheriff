@@ -4,7 +4,8 @@ import { useAction, useQuery, useConvexAuth } from 'convex/react'
 import { SignInButton, SignUpButton } from '@clerk/react'
 import { api } from '../../convex/_generated/api'
 import Loading from '../components/Loading'
-import { Shield, ScanSearch, Lock, ArrowRight, Search } from 'lucide-react'
+import BrandMark from '../components/BrandMark'
+import { ScanSearch, Lock, ArrowRight, Search } from 'lucide-react'
 
 type Suspect = {
   url: string
@@ -71,9 +72,7 @@ export default function Landing() {
     <div className="min-h-screen bg-canvas text-neutral-900 flex flex-col">
       <header className="h-14 border-b border-neutral-200/60 flex items-center justify-between px-5 sm:px-8">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-neutral-900 flex items-center justify-center">
-            <Shield className="w-4 h-4 text-white" />
-          </div>
+          <BrandMark />
           <span className="font-semibold tracking-tight">BrandSheriff</span>
         </div>
         <SignInButton mode="modal">

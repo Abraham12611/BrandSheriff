@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/react'
 import { useConvexAuth } from 'convex/react'
 import { SignIn } from '@clerk/react'
 import Loading from './Loading'
+import BrandMark from './BrandMark'
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
@@ -26,6 +27,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-canvas p-6">
         <div className="w-full max-w-sm mb-4 text-center">
+          <BrandMark className="w-10 h-10 mx-auto mb-3" />
           <h1 className="text-2xl font-bold text-neutral-900">BrandSheriff</h1>
           <p className="text-neutral-600 text-sm mt-2">Sign in to your workspace.</p>
         </div>

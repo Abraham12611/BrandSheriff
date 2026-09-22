@@ -2,7 +2,8 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Loading from '../components/Loading'
-import { Shield, Printer, FileWarning } from 'lucide-react'
+import BrandMark from '../components/BrandMark'
+import { Printer, FileWarning } from 'lucide-react'
 
 type Snapshot = {
   generatedAt: number
@@ -96,9 +97,7 @@ export default function ReportView() {
         <article className="bg-white rounded-2xl border border-neutral-200 overflow-hidden print:border-0 print:rounded-none">
           <header className="px-8 pt-8 pb-6 border-b border-neutral-100">
             <div className="flex items-center gap-2.5 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-white" />
-              </div>
+              <BrandMark className="w-8 h-8" />
               <span className="font-semibold tracking-tight text-neutral-900">BrandSheriff</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{report.title}</h1>

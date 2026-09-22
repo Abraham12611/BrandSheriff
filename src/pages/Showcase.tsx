@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Loading from '../components/Loading'
+import BrandMark from '../components/BrandMark'
 import {
-  Shield,
   ExternalLink,
   ChevronDown,
   ChevronUp,
@@ -326,7 +326,7 @@ export default function Showcase() {
       <header className="bg-neutral-900 text-white">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-amber-400" />
+            <BrandMark className="w-8 h-8" />
             <div>
               <h1 className="text-2xl font-bold">BrandSheriff</h1>
               <p className="text-neutral-400 text-sm">
