@@ -21,3 +21,6 @@ llms-agent-mail.txt
 
 # reference dumps
 docs.firecrawl.dev_*.json
+
+# local-only reference docs
+reference-readme.md
